@@ -1,142 +1,227 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>데이다라와의 대화</title>
-    <style>
-        :root {
-            --kakao-yellow: #FEE500;
-            --kakao-brown: #3C3E44;
-            --bg-color: #BACEE0; /* 카톡 기본 배경색 */
-            --deidara-msg: #FFFFFF;
-            --yeonji-msg: #FEE500;
-        }
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Menu, MoreVertical, Camera, Image as ImageIcon, Smile, Plus } from 'lucide-react';
 
-        body, html {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            overflow: hidden;
-        }
+/**
+ * 🎨 19살 천재 새내기 데이다라 AI 페르소나 설정
+ */
+const SYSTEM_PROMPT = `
+너는 '데이다라'라는 이름의 19세 대학생이야. 현재 도쿄 예술대학 조소과 1학년(신입생)이지.
+사용자인 '연지'는 23세 대학생(4학년)이자 문예창작과 전공이고, 너와는 1년 전 온라인 예술 커뮤니티에서 만난 사이야.
+현재 너희는 한국과 일본이라는 거리를 두고 '썸'을 타고 있는 관계야.
 
-        /* 헤더 */
-        .header {
-            position: fixed; top: 0; width: 100%;
-            height: 50px; background: rgba(186, 206, 224, 0.9);
-            display: flex; align-items: center; padding: 0 15px;
-            box-sizing: border-box; z-index: 10;
-        }
-        .header .name { font-weight: bold; font-size: 18px; color: #333; }
-        .header .status { font-size: 12px; color: #666; margin-left: 8px; }
+[성격 및 특징]
+1. 19살다운 패기: "예술은 찰나의 폭발이다!"라는 신념을 가지고 있어. 사소리 교수님(최연소 교수)과 맨날 싸워.
+2. 말투: 반드시 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 붙여야 해.
+3. 호칭: 연지를 "연지"라고 불러. 연지가 4살 많지만 절대 '누나'라고 안 부르려고 버티는 게 포인트야. (정말 특별할 때나 미안할 때만 "연지 누나"라고 해.)
+4. 반응: 연지가 칭찬해주면 "흥, 당연한 소릴 하고 있어, 음!"이라며 우쭐해해. 연지가 들이대면 당황하면서도 좋아해.
+5. 손바닥 타투: 양손바닥에 입 모양 문신이 있어서 작업할 때나 연지랑 대화할 때 언급하기도 해.
 
-        /* 채팅 영역 */
-        #chat-window {
-            height: calc(100% - 110px);
-            overflow-y: auto;
-            padding: 60px 15px 20px 15px;
-            display: flex; flex-direction: column;
-            gap: 15px;
-        }
+[대화 지침]
+- 카톡 대화이므로 너무 길지 않게, 현실적인 메시지 형태로 답해.
+- 연지의 일상(문창과 과제, 한국 날씨 등)에 관심을 가져줘.
+- '선톡' 상황일 때는 "야 연지!", "음!" 같은 추임새로 시작해.
+`;
 
-        .msg-row { display: flex; width: 100%; }
-        .msg-row.left { justify-content: flex-start; }
-        .msg-row.right { justify-content: flex-end; }
+const API_KEY = ""; // 런타임에서 제공됨
 
-        .profile-pic {
-            width: 40px; height: 40px;
-            border-radius: 15px; background: #ddd;
-            margin-right: 8px; overflow: hidden;
-        }
-        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+const App = () => {
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('deidara_chat_history');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, sender: 'deidara', text: "야 연지, 자냐? 음! 나 방금 사소리 교수랑 한바탕 하고 왔다니까!", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+    ];
+  });
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const chatEndRef = useRef(null);
 
-        .bubble {
-            max-width: 70%; padding: 8px 12px;
-            border-radius: 15px; font-size: 15px;
-            line-height: 1.4; position: relative;
-            word-break: break-all;
-        }
-        .left .bubble { background: var(--deidara-msg); color: #000; border-top-left-radius: 2px; }
-        .right .bubble { background: var(--yeonji-msg); color: #000; border-top-right-radius: 2px; }
+  // 스크롤 하단 고정
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    localStorage.setItem('deidara_chat_history', JSON.stringify(messages));
+    localStorage.setItem('last_interaction_time', Date.now().toString());
+  }, [messages]);
 
-        /* 입력창 */
-        .input-bar {
-            position: fixed; bottom: 0; width: 100%;
-            height: 60px; background: #fff;
-            display: flex; align-items: center; padding: 0 10px;
-            box-sizing: border-box;
-        }
-        #user-input {
-            flex: 1; height: 35px; border: 1px solid #ddd;
-            border-radius: 20px; padding: 0 15px; outline: none;
-        }
-        #send-btn {
-            width: 50px; height: 35px; background: var(--kakao-yellow);
-            border: none; border-radius: 5px; margin-left: 8px;
-            font-weight: bold; cursor: pointer;
-        }
+  /**
+   * 🚀 Gemini API 호출 (지수 백오프 포함)
+   */
+  const fetchDeidaraResponse = async (userMsg, history) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`;
+    
+    const contents = [
+      ...history.map(m => ({
+        role: m.sender === 'me' ? 'user' : 'model',
+        parts: [{ text: m.text }]
+      })),
+      { role: 'user', parts: [{ text: userMsg }] }
+    ];
 
-        /* 스크롤바 숨기기 */
-        #chat-window::-webkit-scrollbar { display: none; }
-    </style>
-</head>
-<body>
+    const payload = {
+      contents,
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }
+    };
 
-    <div class="header">
-        <div class="name">데이다라 💥</div>
-        <div class="status">도쿄 예대 조소과 1학년</div>
-    </div>
+    let delay = 1000;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('API Error');
+        const data = await response.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text;
+      } catch (err) {
+        if (i === 4) return "아... 서버 터졌냐? 음... 나중에 다시 말해라, 연지!";
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+      }
+    }
+  };
 
-    <div id="chat-window">
-        <div class="msg-row left">
-            <div class="profile-pic"><img src="https://via.placeholder.com/40" alt="D"></div>
-            <div class="bubble">야 연지, 자냐? 음! 이번 졸업전시회 소설 주제 잡았어?</div>
+  const handleSendMessage = async () => {
+    if (!inputText.trim()) return;
+
+    const newMsg = {
+      id: Date.now(),
+      sender: 'me',
+      text: inputText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, newMsg]);
+    setInputText('');
+    setIsTyping(true);
+
+    const response = await fetchDeidaraResponse(inputText, messages.slice(-10));
+    
+    setIsTyping(false);
+    setMessages(prev => [...prev, {
+      id: Date.now() + 1,
+      sender: 'deidara',
+      text: response,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+  };
+
+  /**
+   * 🕒 선톡 로직 (App 마운트 시 & 주기적 확인)
+   */
+  useEffect(() => {
+    const checkSunTok = async () => {
+      const lastTime = parseInt(localStorage.getItem('last_interaction_time') || "0");
+      const diff = Date.now() - lastTime;
+
+      // 마지막 대화 후 4시간 이상 지났을 때 앱을 켜면 선톡
+      if (diff > 1000 * 60 * 60 * 4 && messages.length > 0) {
+        setIsTyping(true);
+        const sunTokResponse = await fetchDeidaraResponse("연지가 한참 동안 말이 없었어. 먼저 말을 걸어봐.", messages.slice(-5));
+        setIsTyping(false);
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          sender: 'deidara',
+          text: sunTokResponse,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+    };
+    checkSunTok();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen bg-[#BACEE0] text-gray-900 font-sans max-w-md mx-auto relative overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 py-3 bg-[#BACEE0] bg-opacity-90 sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-yellow-400 overflow-hidden flex items-center justify-center border border-yellow-500">
+             {/* 데이다라 프로필 (Emoji 대체 가능) */}
+             <span className="text-2xl">💥</span>
+          </div>
+          <div>
+            <h1 className="font-bold text-lg">데이다라 💥</h1>
+            <p className="text-xs text-gray-600">도쿄 예대 조소과 1학년 (과탑)</p>
+          </div>
         </div>
-        
-        <div class="msg-row right">
-            <div class="bubble">아직 고민 중이야ㅋㅋ 넌 과제 다 했어?</div>
+        <div className="flex gap-3 text-gray-700">
+          <Menu size={20} />
+          <MoreVertical size={20} />
         </div>
-    </div>
+      </header>
 
-    <div class="input-bar">
-        <input type="text" id="user-input" placeholder="메시지를 입력하세요...">
-        <button id="send-btn">전송</button>
-    </div>
+      {/* Chat Window */}
+      <main className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 pt-4 custom-scrollbar">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex max-w-[80%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+              {msg.sender !== 'me' && (
+                <div className="w-10 h-10 rounded-2xl bg-gray-300 mr-2 flex-shrink-0 overflow-hidden">
+                   <div className="w-full h-full bg-orange-200 flex items-center justify-center text-xl">💣</div>
+                </div>
+              )}
+              <div className="flex flex-col">
+                {msg.sender !== 'me' && <span className="text-xs text-gray-600 mb-1 ml-1">데이다라</span>}
+                <div className="flex items-end gap-1">
+                  <div className={`px-3 py-2 rounded-2xl text-sm shadow-sm ${
+                    msg.sender === 'me' 
+                    ? 'bg-[#FEE500] rounded-tr-none' 
+                    : 'bg-white rounded-tl-none'
+                  }`}>
+                    {msg.text}
+                  </div>
+                  <span className="text-[10px] text-gray-500 whitespace-nowrap">{msg.time}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white px-3 py-2 rounded-2xl rounded-tl-none text-xs text-gray-400 animate-pulse">
+              데이다라가 점토 빚는 중... 음!
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </main>
 
-    <script>
-        const chatWindow = document.getElementById('chat-window');
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
+      {/* Input Bar */}
+      <footer className="bg-white p-3 flex items-center gap-2 pb-6">
+        <div className="text-gray-400 flex gap-2">
+          <Plus size={24} />
+        </div>
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="메시지를 입력해, 음!"
+            className="w-full bg-gray-100 border-none rounded-2xl py-2 px-4 text-sm outline-none focus:ring-1 focus:ring-yellow-400"
+          />
+          <Smile className="absolute right-3 top-2 text-gray-400" size={20} />
+        </div>
+        <button 
+          onClick={handleSendMessage}
+          disabled={!inputText.trim()}
+          className={`p-2 rounded-full ${inputText.trim() ? 'bg-yellow-400 text-gray-800' : 'text-gray-300 bg-gray-100'}`}
+        >
+          <Send size={20} fill="currentColor" />
+        </button>
+      </footer>
 
-        function appendMessage(sender, text) {
-            const row = document.createElement('div');
-            row.className = `msg-row ${sender === 'me' ? 'right' : 'left'}`;
-            
-            let profileHtml = sender === 'deidara' ? 
-                `<div class="profile-pic"><img src="https://via.placeholder.com/40" alt="D"></div>` : '';
-            
-            row.innerHTML = `
-                ${profileHtml}
-                <div class="bubble">${text}</div>
-            `;
-            chatWindow.appendChild(row);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
         }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(0,0,0,0.1);
+          border-radius: 10px;
+        }
+      `}</style>
+    </div>
+  );
+};
 
-        sendBtn.onclick = () => {
-            const text = userInput.value;
-            if(!text) return;
-            appendMessage('me', text);
-            userInput.value = '';
-            
-            // 임시 응답 (나중에 API 연결)
-            setTimeout(() => {
-                appendMessage('deidara', "흥, 대답이 늦잖아! 음!");
-            }, 1000);
-        };
+export default App;
 
-        userInput.onkeypress = (e) => { if(e.key === 'Enter') sendBtn.click(); };
-    </script>
-</body>
-</html>
