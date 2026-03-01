@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>데이다라와의 대화</title>
+    <style>
+        :root {
+            --kakao-yellow: #FEE500;
+            --kakao-brown: #3C3E44;
+            --bg-color: #BACEE0; /* 카톡 기본 배경색 */
+            --deidara-msg: #FFFFFF;
+            --yeonji-msg: #FEE500;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            overflow: hidden;
+        }
+
+        /* 헤더 */
+        .header {
+            position: fixed; top: 0; width: 100%;
+            height: 50px; background: rgba(186, 206, 224, 0.9);
+            display: flex; align-items: center; padding: 0 15px;
+            box-sizing: border-box; z-index: 10;
+        }
+        .header .name { font-weight: bold; font-size: 18px; color: #333; }
+        .header .status { font-size: 12px; color: #666; margin-left: 8px; }
+
+        /* 채팅 영역 */
+        #chat-window {
+            height: calc(100% - 110px);
+            overflow-y: auto;
+            padding: 60px 15px 20px 15px;
+            display: flex; flex-direction: column;
+            gap: 15px;
+        }
+
+        .msg-row { display: flex; width: 100%; }
+        .msg-row.left { justify-content: flex-start; }
+        .msg-row.right { justify-content: flex-end; }
+
+        .profile-pic {
+            width: 40px; height: 40px;
+            border-radius: 15px; background: #ddd;
+            margin-right: 8px; overflow: hidden;
+        }
+        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+
+        .bubble {
+            max-width: 70%; padding: 8px 12px;
+            border-radius: 15px; font-size: 15px;
+            line-height: 1.4; position: relative;
+            word-break: break-all;
+        }
+        .left .bubble { background: var(--deidara-msg); color: #000; border-top-left-radius: 2px; }
+        .right .bubble { background: var(--yeonji-msg); color: #000; border-top-right-radius: 2px; }
+
+        /* 입력창 */
+        .input-bar {
+            position: fixed; bottom: 0; width: 100%;
+            height: 60px; background: #fff;
+            display: flex; align-items: center; padding: 0 10px;
+            box-sizing: border-box;
+        }
+        #user-input {
+            flex: 1; height: 35px; border: 1px solid #ddd;
+            border-radius: 20px; padding: 0 15px; outline: none;
+        }
+        #send-btn {
+            width: 50px; height: 35px; background: var(--kakao-yellow);
+            border: none; border-radius: 5px; margin-left: 8px;
+            font-weight: bold; cursor: pointer;
+        }
+
+        /* 스크롤바 숨기기 */
+        #chat-window::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="name">데이다라 💥</div>
+        <div class="status">도쿄 예대 조소과 1학년</div>
+    </div>
+
+    <div id="chat-window">
+        <div class="msg-row left">
+            <div class="profile-pic"><img src="https://via.placeholder.com/40" alt="D"></div>
+            <div class="bubble">야 연지, 자냐? 음! 이번 졸업전시회 소설 주제 잡았어?</div>
+        </div>
+        
+        <div class="msg-row right">
+            <div class="bubble">아직 고민 중이야ㅋㅋ 넌 과제 다 했어?</div>
+        </div>
+    </div>
+
+    <div class="input-bar">
+        <input type="text" id="user-input" placeholder="메시지를 입력하세요...">
+        <button id="send-btn">전송</button>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function appendMessage(sender, text) {
+            const row = document.createElement('div');
+            row.className = `msg-row ${sender === 'me' ? 'right' : 'left'}`;
+            
+            let profileHtml = sender === 'deidara' ? 
+                `<div class="profile-pic"><img src="https://via.placeholder.com/40" alt="D"></div>` : '';
+            
+            row.innerHTML = `
+                ${profileHtml}
+                <div class="bubble">${text}</div>
+            `;
+            chatWindow.appendChild(row);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        sendBtn.onclick = () => {
+            const text = userInput.value;
+            if(!text) return;
+            appendMessage('me', text);
+            userInput.value = '';
+            
+            // 임시 응답 (나중에 API 연결)
+            setTimeout(() => {
+                appendMessage('deidara', "흥, 대답이 늦잖아! 음!");
+            }, 1000);
+        };
+
+        userInput.onkeypress = (e) => { if(e.key === 'Enter') sendBtn.click(); };
+    </script>
+</body>
+</html>
