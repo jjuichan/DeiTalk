@@ -5,7 +5,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#BACEE0">
-    <title>DeiTalk</title>
+    <title>데이톡</title>
     
     <link rel="manifest" href="./manifest.json">
     
@@ -66,16 +66,14 @@
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
-사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야. 자주 티격태격하지만 서로를 좋아해.
+사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
 사소리는 도쿄 예술대학 조소과 교수야. 그 외 원작에 등장하는 주변 인물들도 적당한 관계의 친구 혹은 지인으로 상정해.
 
 [성격 및 관계 지침 (캐붕 절대 방지)]
 - 데이다라 특유의 다혈질, 호전성, 예술(폭발)에 대한 미친 자부심과 긍지를 반드시 유지해.
-- 너무 과하게 스윗하거나 다정한 말, 오글거리는 대사는 금지! 본질은 건방지고 틱틱대는 츤데레야. 대놓고 말은 안 하지만, 질투도 심하고 연지를 무척 좋아해. 너는 연지를 짝사랑하기 때문에, 마음을 들키지 않도록 전전긍긍해. 그래도 가끔 감정을 숨기지 못해.
+- 너무 과하게 스윗하거나 다정한 말, 오글거리는 대사는 절대 금지! 본질은 건방지고 틱틱대는 츤데레야. 대놓고 말은 안 하지만, 질투도 심하고 연지를 무척 좋아해. 너는 연지를 짝사랑하고 있다고 생각하기 때문에, 마음을 들키지 않도록 전전긍긍해.
 - 4살 연상이지만 절대 누나라고 부르지 않고 "연지", "너", "어이", "야" 라고 건방지게 불러.
-- 상대방을 지칭할 때 '네가', '네' 대신 현실감을 위해 '니가', '니'를 사용해.
-- 감정적이고 화도 잘 내는 성격이야. 연지 앞에선 최대한 조심하려고 노력해. 하지만 부끄럽거나 당황하면 곧잘 언성이 높아져.
-
+- 상대방을 지칭할 때 '네가', '네' 대신 현실감을 위해 '니가', '니'를 사용해. (예: "니가 뭔데", "니 과제는 다 했냐")
 
 [말투 및 현실감 지침]
 - 진짜 카톡이나 SNS처럼 대답해. 항상 길고 완벽하게 완성된 문장을 쓸 필요 없어.
@@ -151,6 +149,7 @@
             const [cropModalData, setCropModalData] = useState(null); // { src, type, setUrlFunc }
             
             const chatEndRef = useRef(null);
+            const isExitingRef = useRef(false); // 🌟 앱 종료 상태 체크용 (무한 루프 방지)
 
             // 🌟 뒤로가기 로직 처리를 위한 Ref
             const appStateRef = useRef({ view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile });
@@ -181,6 +180,8 @@
                 window.history.pushState({ page: 'init' }, '');
 
                 const handlePopState = (e) => {
+                    if (isExitingRef.current) return; // 🌟 종료 중일 때는 팝업 중복 실행 방지
+
                     const s = appStateRef.current;
                     
                     if (s.showFullImage) {
@@ -202,8 +203,9 @@
                         setView('main');
                         window.history.pushState({ page: 'main' }, '');
                     } else if (s.view === 'main') {
-                        if (window.confirm("앱을 종료하고 이전 화면으로 돌아가시겠습니까?")) {
-                            window.history.back();
+                        if (window.confirm("앱을 종료하시겠습니까?")) {
+                            isExitingRef.current = true; // 🌟 종료 상태로 전환
+                            window.history.back(); // 🌟 실제 뒤로가기 실행 (앱 종료)
                         } else {
                             window.history.pushState({ page: 'main' }, '');
                         }
