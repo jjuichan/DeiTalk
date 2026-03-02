@@ -20,7 +20,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // 🌟 arrayRemove 추가
+        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
@@ -37,7 +38,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, getDoc };
+        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc };
     </script>
 
     <style>
@@ -80,7 +81,6 @@
   3. 반드시 마침표(.), 물음표(?), 느낌표(!)로 문장이 완전히 끝난 뒤에 독립적으로 붙여. (예: "알았어. 음.", "뭐하냐? 음!")
         `;
 
-        // 🌟 공통 아이콘 SVG 컴포넌트
         const DefaultAvatar = () => (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
@@ -398,18 +398,23 @@
                 setIsPosting(false);
             };
 
+            // 🌟 댓글 추가 & 호출 통합 기능
             const handleAddComment = async (postId) => {
                 const commentText = commentInputs[postId];
-                if (!commentText || !commentText.trim()) return;
+                const isEmpty = !commentText || !commentText.trim();
                 
                 const { doc, updateDoc, arrayUnion, getDoc } = window.firebaseAPI;
-                const newCommentObj = { author: 'me', content: commentText, createdAt: new Date().getTime() };
                 
-                await updateDoc(doc(db, `users/${user.uid}/posts/${postId}`), {
-                    comments: arrayUnion(newCommentObj)
-                });
-                setCommentInputs(prev => ({...prev, [postId]: ''}));
+                // 값이 있으면 연지의 댓글로 먼저 저장
+                if (!isEmpty) {
+                    const newCommentObj = { author: 'me', content: commentText, createdAt: new Date().getTime() };
+                    await updateDoc(doc(db, `users/${user.uid}/posts/${postId}`), {
+                        comments: arrayUnion(newCommentObj)
+                    });
+                    setCommentInputs(prev => ({...prev, [postId]: ''}));
+                }
 
+                // 데이다라 반응 생성 (댓글 유무/값 유무에 따라 상황별 프롬프트 주입)
                 const postSnap = await getDoc(doc(db, `users/${user.uid}/posts/${postId}`));
                 if (postSnap.exists()) {
                     setIsPosting(true);
@@ -417,7 +422,21 @@
                     
                     const threadContext = (postData.comments || []).map(c => `${c.author === 'me' ? '연지' : '데이다라'}: ${c.content}`).join('\n');
                     
-                    const replyPrompt = `${SYSTEM_PROMPT}\n\n[상황]\n피드 원문: "${postData.content}" (작성자: ${postData.author === 'me' ? '연지' : '데이다라'})\n[댓글 타래]\n${threadContext}\n연지의 방금 추가된 댓글: "${commentText}"\n\n지침: 연지의 최신 댓글을 읽고 데이다라로서 짧고 자연스럽게 답글(댓글)을 달아줘.`;
+                    let replyPrompt = "";
+                    if (!isEmpty) {
+                        replyPrompt = `${SYSTEM_PROMPT}\n\n[상황]\n피드 원문: "${postData.content}" (작성자: ${postData.author === 'me' ? '연지' : '데이다라'})\n[댓글 타래]\n${threadContext}\n연지의 방금 추가된 댓글: "${commentText}"\n\n지침: 연지의 최신 댓글을 읽고 데이다라로서 짧고 자연스럽게 답글(댓글)을 달아줘.`;
+                    } else {
+                        if ((postData.comments || []).length > 0) {
+                            const lastComment = postData.comments[postData.comments.length - 1];
+                            if (lastComment.author === 'me') {
+                                replyPrompt = `${SYSTEM_PROMPT}\n\n[상황]\n피드 원문: "${postData.content}"\n[댓글 타래]\n${threadContext}\n\n지침: 연지가 마지막으로 댓글을 달고 아무 말 없이 널 기다리고 있어. 직전 연지의 말에 이어서 대답하거나 반응해 줘.`;
+                            } else {
+                                replyPrompt = `${SYSTEM_PROMPT}\n\n[상황]\n피드 원문: "${postData.content}"\n[댓글 타래]\n${threadContext}\n\n지침: 네가 마지막으로 댓글을 달았는데 연지가 대답이 없어. 연지를 부르거나 직전에 했던 말에 이어서 짧게 한마디 더 해봐.`;
+                            }
+                        } else {
+                            replyPrompt = `${SYSTEM_PROMPT}\n\n[상황]\n피드 원문: "${postData.content}"\n\n지침: 이 게시물에 아직 댓글이 없는데, 연지가 너의 반응을 기다리고 있어. 데이다라로서 짧게 댓글을 먼저 달아줘.`;
+                        }
+                    }
                     
                     const deidaraReply = await fetchAPI([{role: 'user', parts: [{text: "(댓글에 대답해줘)"}]}], replyPrompt);
                     
@@ -427,6 +446,16 @@
                         });
                     }
                     setIsPosting(false);
+                }
+            };
+
+            // 🌟 댓글 삭제 기능
+            const handleDeleteComment = async (postId, commentToRemove) => {
+                if(window.confirm("이 댓글을 삭제할까요?")) {
+                    const { doc, updateDoc, arrayRemove } = window.firebaseAPI;
+                    await updateDoc(doc(db, `users/${user.uid}/posts/${postId}`), {
+                        comments: arrayRemove(commentToRemove)
+                    });
                 }
             };
 
@@ -904,18 +933,26 @@
                                                 <p className="text-[14px] text-gray-800 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
 
                                                 <div className="bg-gray-50 rounded-xl p-3">
-                                                    <div className="text-[11px] font-bold text-gray-500 mb-2">댓글 {post.comments ? post.comments.length : 0}개</div>
+                                                    <div className="text-[11px] font-bold text-gray-500 mb-3">댓글 {post.comments ? post.comments.length : 0}개</div>
                                                     
-                                                    <div className="space-y-2 mb-3">
+                                                    <div className="space-y-3 mb-3">
                                                         {(post.comments || []).map((c, i) => (
-                                                            <div key={i} className="flex gap-2">
-                                                                <span className="font-bold text-[12px] text-gray-800 whitespace-nowrap">{c.author === 'me' ? '연지' : '데이다라'}</span>
-                                                                <span className="text-[12px] text-gray-600">{c.content}</span>
+                                                            <div key={i} className="flex gap-2 relative group items-start">
+                                                                <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-white border border-gray-200">
+                                                                    {c.author === 'me' ? renderMyProfilePic("w-full h-full") : renderProfilePic("w-full h-full")}
+                                                                </div>
+                                                                <div className="flex flex-col flex-1 pb-1">
+                                                                    <span className="font-bold text-[12px] text-gray-800">{c.author === 'me' ? '연지' : '데이다라'}</span>
+                                                                    <span className="text-[12px] text-gray-600 break-words pr-5">{c.content}</span>
+                                                                </div>
+                                                                <button onClick={() => handleDeleteComment(post.id, c)} className="absolute right-0 top-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white rounded-md shadow-sm border border-gray-100">
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                                </button>
                                                             </div>
                                                         ))}
                                                     </div>
 
-                                                    <div className="flex gap-2 mt-2">
+                                                    <div className="flex gap-2 mt-2 items-center">
                                                         <input 
                                                             type="text" 
                                                             value={commentInputs[post.id] || ''} 
@@ -924,7 +961,12 @@
                                                             className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none"
                                                             onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
                                                         />
-                                                        <button onClick={() => handleAddComment(post.id)} className="text-blue-500 font-bold text-xs px-2">게시</button>
+                                                        <button 
+                                                            onClick={() => handleAddComment(post.id)} 
+                                                            className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-colors ${commentInputs[post.id]?.trim() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+                                                        >
+                                                            {commentInputs[post.id]?.trim() ? '게시' : '호출'}
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
