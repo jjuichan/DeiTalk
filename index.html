@@ -498,7 +498,7 @@
                             </button>
                             {!isEditing && (
                                 <button onClick={() => setIsEditing(true)} className="text-white px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full transition text-xs font-bold flex items-center gap-1 shadow-sm backdrop-blur-sm border border-white/20">
-                                    ✏️ 편집
+                                    편집
                                 </button>
                             )}
                         </div>
@@ -509,7 +509,7 @@
                                 <div className="absolute top-16 right-4">
                                     <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setEditBgImg, 'bg')} id="bg-edit-upload" className="hidden" />
                                     <label htmlFor="bg-edit-upload" className="bg-black/50 hover:bg-black/70 text-white px-3 py-1.5 rounded-full text-xs cursor-pointer backdrop-blur-sm border border-white/20 shadow-lg">
-                                        🖼️ 배경 변경
+                                        배경 변경
                                     </label>
                                 </div>
                             )}
@@ -766,7 +766,7 @@
                                         ></textarea>
                                         <div className="flex justify-between items-center mt-2">
                                             <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 bg-orange-50 px-3 py-2 rounded-lg hover:bg-orange-100 transition flex items-center gap-1">
-                                                💥 데이다라 근황 묻기
+                                                피드 업데이트
                                             </button>
                                             <button onClick={handleAddPost} disabled={!postInput.trim() || isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition ${postInput.trim() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
                                                 올리기
