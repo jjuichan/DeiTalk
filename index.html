@@ -73,20 +73,17 @@
             const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
             
-            // 🌟 앱 뷰 상태 (login, main, chatRoom)
             const [view, setView] = useState('login'); 
-            // 🌟 메인 탭 상태 (friends, chat, feed)
             const [activeTab, setActiveTab] = useState('friends');
             
             const [chatRooms, setChatRooms] = useState([]);
             const [currentRoomId, setCurrentRoomId] = useState(null);
             const [messages, setMessages] = useState([]);
             
-            // 피드(게시물) 상태
             const [posts, setPosts] = useState([]);
             const [postInput, setPostInput] = useState('');
             const [isPosting, setIsPosting] = useState(false);
-            const [commentInputs, setCommentInputs] = useState({}); // 게시물별 댓글 입력창 상태
+            const [commentInputs, setCommentInputs] = useState({}); 
             
             const [inputText, setInputText] = useState('');
             const [isTyping, setIsTyping] = useState(false);
@@ -101,7 +98,6 @@
             
             const chatEndRef = useRef(null);
 
-            // 초기화
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
@@ -125,7 +121,6 @@
                 return () => clearInterval(initTimer);
             }, []);
 
-            // 데이터 불러오기 로직 (방 목록, 피드)
             const loadChatRooms = (uid, firestoreDb) => {
                 const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
                 const q = query(collection(firestoreDb, `users/${uid}/rooms`), orderBy('updatedAt', 'desc'));
@@ -146,7 +141,6 @@
                 });
             };
 
-            // 특정 채팅방 메시지 불러오기
             useEffect(() => {
                 if (!currentRoomId || !user || !db || view !== 'chatRoom') return;
                 const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
@@ -160,22 +154,51 @@
                 return () => unsubscribe();
             }, [currentRoomId, user, db, view]);
 
-            // 공통 API 통신 함수
+            // ==========================================
+            // 🌟 API 호출 오류 방지 로직 대폭 강화
+            // ==========================================
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`;
+                // 1. 보다 안정적인 최신 모델로 변경
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+                
                 try {
+                    // 2. 메시지 배열 필터링 (동일한 발송자가 연속으로 보낸 경우 하나로 병합하여 에러 방지)
+                    let normalizedContents = [];
+                    let currentRole = null;
+                    
+                    for (const msg of contents) {
+                        if (msg.role !== currentRole) {
+                            normalizedContents.push({ role: msg.role, parts: [{ text: msg.parts[0].text }] });
+                            currentRole = msg.role;
+                        } else {
+                            // 같은 역할이 연속으로 나오면 텍스트를 이어 붙임
+                            if(normalizedContents.length > 0) {
+                                normalizedContents[normalizedContents.length - 1].parts[0].text += "\n" + msg.parts[0].text;
+                            }
+                        }
+                    }
+
                     const response = await fetch(url, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: customPrompt }] } })
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: normalizedContents, systemInstruction: { parts: [{ text: customPrompt }] } })
                     });
+
+                    // 3. API 에러가 났을 때 진짜 원인 반환
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        console.error("Gemini API 에러:", errData);
+                        return `어이, 연지! 시스템 에러 났다, 음! (${errData.error?.message || response.status})`;
+                    }
+
                     const data = await response.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 에러 났다!";
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 응답이 안 왔어, 다시 말해봐!";
                 } catch (err) {
-                    return "인터넷 끊겼냐, 음?!";
+                    console.error("통신 에러:", err);
+                    return "인터넷이 끊겼거나 네 API 키가 이상한 거 아니냐, 음?! 다시 확인해 봐!";
                 }
             };
 
-            // 인증 관련
             const handleLogin = async () => {
                 const { auth, provider, signInWithPopup } = window.firebaseAPI;
                 try { await signInWithPopup(auth, provider); } catch (error) { alert("로그인 실패: " + error.message); }
@@ -185,7 +208,6 @@
                 await signOut(auth);
             };
 
-            // 채팅방 관련 함수
             const createNewRoom = async () => {
                 const roomName = prompt("새로운 채팅방 이름을 입력해, 음!");
                 if (!roomName || !roomName.trim()) return;
@@ -198,7 +220,10 @@
             };
 
             const handleSend = async () => {
-                if (!inputText.trim() || !geminiKey || !currentRoomId) return;
+                if (!inputText.trim() || !geminiKey || !currentRoomId) {
+                    if(!geminiKey) alert("설정(⚙️)에서 Gemini API 키를 넣어주세요!");
+                    return;
+                }
                 const { collection, addDoc, doc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const textToSend = inputText;
                 const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -219,20 +244,14 @@
                 await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: responseText, updatedAt: serverTimestamp() }, { merge: true });
             };
 
-            // ==========================================
-            // 🌟 피드(게시물) 관련 로직 추가
-            // ==========================================
-            
-            // 1. 연지가 피드에 새 글 쓰기 -> 데이다라 자동 댓글
             const handleAddPost = async () => {
                 if (!postInput.trim() || !geminiKey) {
-                    if(!geminiKey) alert("API 설정(오른쪽 위 톱니바퀴)에서 키를 먼저 넣어줘!");
+                    if(!geminiKey) alert("설정(⚙️)에서 API 키를 먼저 넣어줘!");
                     return;
                 }
                 setIsPosting(true);
                 const { collection, addDoc, updateDoc, doc, serverTimestamp, arrayUnion } = window.firebaseAPI;
                 
-                // 내 글 등록
                 const postRef = await addDoc(collection(db, `users/${user.uid}/posts`), {
                     author: 'me',
                     content: postInput,
@@ -242,18 +261,15 @@
                 const myContent = postInput;
                 setPostInput('');
 
-                // 데이다라 댓글 생성
-                const commentPrompt = `${SYSTEM_PROMPT}\n지침: 연지가 SNS 게시물에 "${myContent}"라고 글을 올렸다. 데이다라로서 이 게시물에 짧고 반응성 좋은 댓글(2~3문장 이내)을 달아줘.`;
+                const commentPrompt = `${SYSTEM_PROMPT}\n지침: 연지가 SNS 게시물에 "${myContent}"라고 글을 올렸다. 데이다라로서 이 게시물에 짧고 반응성 좋은 댓글(1~2문장 이내)을 달아줘.`;
                 const replyText = await fetchAPI([{role: 'user', parts: [{text: "(게시물에 댓글을 달아줘)"}]}], commentPrompt);
                 
-                // 댓글 업데이트
                 await updateDoc(doc(db, `users/${user.uid}/posts/${postRef.id}`), {
                     comments: arrayUnion({ author: 'deidara', content: replyText, createdAt: new Date().getTime() })
                 });
                 setIsPosting(false);
             };
 
-            // 2. 데이다라가 새 글 쓰게 유도 (버튼 클릭)
             const handleDeidaraNewPost = async () => {
                 if (!geminiKey) return alert("API 키가 필요해!");
                 setIsPosting(true);
@@ -271,7 +287,6 @@
                 setIsPosting(false);
             };
 
-            // 3. 기존 게시물에 댓글 달기 (연지가 댓글 달기)
             const handleAddComment = async (postId) => {
                 const commentText = commentInputs[postId];
                 if (!commentText || !commentText.trim()) return;
@@ -281,7 +296,6 @@
                     comments: arrayUnion({ author: 'me', content: commentText, createdAt: new Date().getTime() })
                 });
                 
-                // 댓글 입력창 비우기
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
             };
 
@@ -292,9 +306,34 @@
                 }
             };
 
-            // ==========================================
+            const deleteRoom = async (roomId, e) => {
+                e.stopPropagation();
+                if(!confirm("이 방을 진짜 폭발시킬(삭제할) 거냐, 음?!")) return;
+                const { doc, deleteDoc, collection, getDocs } = window.firebaseAPI;
+                const msgsRef = collection(db, `users/${user.uid}/rooms/${roomId}/messages`);
+                const snapshot = await getDocs(msgsRef);
+                snapshot.forEach(async (msgDoc) => await deleteDoc(doc(db, `users/${user.uid}/rooms/${roomId}/messages/${msgDoc.id}`)));
+                await deleteDoc(doc(db, `users/${user.uid}/rooms/${roomId}`));
+                if(currentRoomId === roomId) { setCurrentRoomId(null); setView('chatList'); }
+            };
 
-            // 설정 및 프로필 로직
+            const handleEditMsg = async (msgId, oldText) => {
+                const newText = window.prompt("메시지를 수정하세요, 음!", oldText);
+                if (newText !== null && newText.trim() !== "") {
+                    const { doc, setDoc } = window.firebaseAPI;
+                    await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: newText }, { merge: true });
+                }
+                setSelectedMsgId(null);
+            };
+
+            const handleDeleteMsg = async (msgId) => {
+                if(window.confirm("이 메시지를 지울까, 음?")) {
+                    const { doc, deleteDoc } = window.firebaseAPI;
+                    await deleteDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`));
+                }
+                setSelectedMsgId(null);
+            };
+
             const handleImageUpload = (e, type) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -363,10 +402,6 @@
                 </div>
             );
 
-            // ==========================================
-            // 🌟 렌더링 뷰 영역
-            // ==========================================
-
             if (view === 'login') {
                 return (
                     <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-[#BACEE0] items-center justify-center p-6">
@@ -382,7 +417,6 @@
                 );
             }
 
-            // 채팅방 내부 화면 (하단 탭이 없음)
             if (view === 'chatRoom') {
                 const currentRoomName = chatRooms.find(r => r.id === currentRoomId)?.name || "채팅방";
                 return (
@@ -434,15 +468,11 @@
                 );
             }
 
-            // ==========================================
-            // 🌟 메인 화면 (친구, 채팅, 게시물 탭 포함)
-            // ==========================================
             if (view === 'main') {
                 return (
                     <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-gray-50">
                         {showProfile && <ProfileModal />}
                         
-                        {/* 설정 모달 */}
                         {showSettings && (
                             <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
                                 <div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll">
@@ -468,7 +498,6 @@
                             </div>
                         )}
 
-                        {/* 공통 상단 헤더 */}
                         <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 sticky top-0 z-20">
                             <h1 className="font-extrabold text-xl text-gray-800">
                                 {activeTab === 'friends' && "친구"}
@@ -481,13 +510,10 @@
                             </div>
                         </header>
 
-                        {/* 🌟 탭별 내용 영역 */}
                         <main className="flex-1 overflow-y-auto pb-24 custom-scrollbar">
                             
-                            {/* 1. 친구 탭 */}
                             {activeTab === 'friends' && (
                                 <div className="p-4 space-y-6">
-                                    {/* 내 프로필 */}
                                     <div>
                                         <h2 className="text-xs text-gray-400 font-bold mb-3 px-1">내 프로필</h2>
                                         <div className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl transition-colors">
@@ -499,7 +525,6 @@
                                         </div>
                                     </div>
                                     <div className="h-px bg-gray-100 w-full"></div>
-                                    {/* 친구 목록 */}
                                     <div>
                                         <h2 className="text-xs text-gray-400 font-bold mb-3 px-1">친구 (1)</h2>
                                         <div onClick={() => setShowProfile(true)} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer transition-colors">
@@ -515,7 +540,6 @@
                                 </div>
                             )}
 
-                            {/* 2. 채팅 탭 */}
                             {activeTab === 'chat' && (
                                 <div className="px-2 py-2">
                                     {chatRooms.length === 0 ? (
@@ -539,10 +563,8 @@
                                 </div>
                             )}
 
-                            {/* 3. 게시물(피드) 탭 */}
                             {activeTab === 'feed' && (
                                 <div className="bg-gray-100 min-h-full pb-10">
-                                    {/* 내 게시물 쓰기 영역 */}
                                     <div className="bg-white p-4 mb-3 shadow-sm">
                                         <textarea 
                                             value={postInput} 
@@ -561,16 +583,13 @@
                                         </div>
                                     </div>
 
-                                    {/* 게시물 목록 */}
                                     {isPosting && <div className="text-center py-4 text-xs text-gray-500 animate-pulse">업데이트 중... 음!</div>}
                                     
                                     <div className="space-y-3 px-3">
                                         {posts.map(post => (
                                             <div key={post.id} className="bg-white rounded-2xl shadow-sm p-4 relative msg-anim">
-                                                {/* 삭제 버튼 */}
                                                 <button onClick={() => deletePost(post.id)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 text-sm">🗑️</button>
                                                 
-                                                {/* 글 작성자 프로필 */}
                                                 <div className="flex items-center gap-3 mb-3">
                                                     {post.author === 'me' ? (
                                                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-lg">🧑‍💻</div>
@@ -587,10 +606,8 @@
                                                     </div>
                                                 </div>
 
-                                                {/* 본문 */}
                                                 <p className="text-[14px] text-gray-800 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
 
-                                                {/* 댓글 영역 */}
                                                 <div className="bg-gray-50 rounded-xl p-3">
                                                     <div className="text-[11px] font-bold text-gray-500 mb-2">댓글 {post.comments ? post.comments.length : 0}개</div>
                                                     
@@ -603,7 +620,6 @@
                                                         ))}
                                                     </div>
 
-                                                    {/* 댓글 달기 인풋 (연지가 데이다라 글에 댓글 달기 위함) */}
                                                     <div className="flex gap-2 mt-2">
                                                         <input 
                                                             type="text" 
@@ -624,21 +640,15 @@
                             )}
                         </main>
 
-                        {/* 🌟 하단 네비게이션 탭 바 */}
                         <nav className="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center h-[70px] pb-safe z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]">
-                            {/* 친구 탭 버튼 */}
                             <div onClick={() => setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition ${activeTab === 'friends' ? 'text-gray-900' : 'text-gray-400'}`}>
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'friends' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 <span className="text-[10px] font-semibold">친구</span>
                             </div>
-                            
-                            {/* 채팅 탭 버튼 */}
                             <div onClick={() => setActiveTab('chat')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition ${activeTab === 'chat' ? 'text-gray-900' : 'text-gray-400'}`}>
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'chat' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                                 <span className="text-[10px] font-semibold">채팅</span>
                             </div>
-                            
-                            {/* 피드 탭 버튼 */}
                             <div onClick={() => setActiveTab('feed')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition ${activeTab === 'feed' ? 'text-gray-900' : 'text-gray-400'}`}>
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'feed' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                                 <span className="text-[10px] font-semibold">게시물</span>
