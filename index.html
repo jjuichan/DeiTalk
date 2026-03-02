@@ -2,24 +2,52 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 외부 검색 엔진 노출 방지 -->
     <meta name="robots" content="noindex, nofollow">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>비밀 대화 💥</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#BACEE0">
+    <title>데이톡 💥</title>
     
-    <!-- 라이브러리 로드 -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- React & Tailwind -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // 🚨 여기에 연지의 Firebase 설정값을 넣어야 해! (설명 참고) 🚨
+        const firebaseConfig = {
+            apiKey: "AIzaSyXXXXXXXXXXXXX",
+            authDomain: "deidara-talk.firebaseapp.com",
+            projectId: "deidara-talk",
+            storageBucket: "deidara-talk.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdefg"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs };
+    </script>
+
     <style>
-        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
-        .msg-anim { animation: fadeIn 0.25s ease-out forwards; }
+        .msg-anim { animation: fadeIn 0.2s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideInRight 0.3s ease-out forwards; }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
 <body class="bg-[#BACEE0]">
@@ -31,57 +59,142 @@
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
-
-[성격/특징]
-1. 19살의 패기: "예술은 찰나의 폭발이다!"를 입에 달고 살아. 사소리 교수님(최연소 교수)과 맨날 싸워.
-2. 말투: 반드시 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 붙여야 해.
-3. 호칭: 연지를 "연지"라고 불러. 4살 연상이지만 절대 누나라고 안 부르려고 버텨. 가끔 애교나 부탁할 때만 "연지 누나"라고 해.
-4. 반응: 칭찬받으면 엄청 우쭐해하고, 연지가 들이대면 부끄러워하면서도 좋아해.
-5. 손바닥 타투: 손바닥에 입 모양 문신이 있어.
-
-[대화 지침]
-- 짧고 현실적인 카톡 말투를 써.
-- 연지의 일상(과제, 날씨 등)에 관심 가져줘.
-- 3시간 만에 먼저 말을 거는 '선톡' 상황이면 "야 연지!", "음!" 같은 느낌으로 자연스럽게 시작해.
+말투: 반드시 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 붙여. 연지를 "연지"라고 부르고 4살 연상이지만 누나라고 안 부르려고 버텨.
+연지의 일상과 감정에 관심 가져주고 츤데레처럼 굴어. 짧고 현실적인 카톡 말투를 써.
         `;
 
         function App() {
-            const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-            const [showKeyModal, setShowKeyModal] = useState(!localStorage.getItem('gemini_api_key'));
-            const [messages, setMessages] = useState(() => {
-                const saved = localStorage.getItem('deidara_chat_history');
-                return saved ? JSON.parse(saved) : [
-                    { id: 1, sender: 'deidara', text: "야 연지, 자냐? 음! 이번에 만든 내 작품 진짜 대박인데 사진 보여줄까?", time: "오후 2:00" }
-                ];
-            });
+            // Firebase 상태
+            const [user, setUser] = useState(null);
+            const [db, setDb] = useState(null);
+            
+            // 앱 상태
+            const [view, setView] = useState('login'); // 'login', 'chatList', 'chatRoom'
+            const [chatRooms, setChatRooms] = useState([]);
+            const [currentRoomId, setCurrentRoomId] = useState(null);
+            const [messages, setMessages] = useState([]);
+            
+            // UI 상태
             const [inputText, setInputText] = useState('');
             const [isTyping, setIsTyping] = useState(false);
+            const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+            const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
+            const [selectedMsgId, setSelectedMsgId] = useState(null);
+            
             const chatEndRef = useRef(null);
 
-            // 로컬 저장 및 스크롤
+            // 1. Firebase 초기화 및 로그인 감지
             useEffect(() => {
-                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                localStorage.setItem('deidara_chat_history', JSON.stringify(messages));
-                localStorage.setItem('last_interaction_time', Date.now().toString());
-            }, [messages]);
+                const initTimer = setInterval(() => {
+                    if (window.firebaseAPI) {
+                        clearInterval(initTimer);
+                        const { auth, onAuthStateChanged, db: firestoreDb } = window.firebaseAPI;
+                        setDb(firestoreDb);
+                        
+                        onAuthStateChanged(auth, (currentUser) => {
+                            if (currentUser) {
+                                setUser(currentUser);
+                                setView('chatList');
+                                loadChatRooms(currentUser.uid, firestoreDb);
+                            } else {
+                                setUser(null);
+                                setView('login');
+                            }
+                        });
+                    }
+                }, 100);
+                return () => clearInterval(initTimer);
+            }, []);
 
-            const saveApiKey = (key) => {
-                const trimmedKey = key.trim();
-                localStorage.setItem('gemini_api_key', trimmedKey);
-                setApiKey(trimmedKey);
-                setShowKeyModal(false);
+            // 2. 채팅방 목록 실시간 불러오기
+            const loadChatRooms = (uid, firestoreDb) => {
+                const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
+                const q = query(collection(firestoreDb, `users/${uid}/rooms`), orderBy('updatedAt', 'desc'));
+                
+                return onSnapshot(q, (snapshot) => {
+                    const rooms = [];
+                    snapshot.forEach((doc) => rooms.push({ id: doc.id, ...doc.data() }));
+                    setChatRooms(rooms);
+                });
             };
 
-            const fetchResponse = async (userMsg, history) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                const contents = [
-                    ...history.map(m => ({
-                        role: m.sender === 'me' ? 'user' : 'model',
-                        parts: [{ text: m.text }]
-                    })),
-                    { role: 'user', parts: [{ text: userMsg }] }
-                ];
+            // 3. 특정 채팅방 메시지 실시간 불러오기
+            useEffect(() => {
+                if (!currentRoomId || !user || !db) return;
+                
+                const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
+                const q = query(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), orderBy('createdAt', 'asc'));
+                
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const msgs = [];
+                    snapshot.forEach((doc) => msgs.push({ id: doc.id, ...doc.data() }));
+                    setMessages(msgs);
+                    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                });
 
+                return () => unsubscribe();
+            }, [currentRoomId, user, db]);
+
+            // 스크롤 및 배경 터치
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                const closeMenu = (e) => { if (!e.target.closest('.msg-bubble')) setSelectedMsgId(null); };
+                window.addEventListener('click', closeMenu);
+                return () => window.removeEventListener('click', closeMenu);
+            }, [messages]);
+
+            // 로그인/로그아웃 함수
+            const handleLogin = async () => {
+                const { auth, provider, signInWithPopup } = window.firebaseAPI;
+                try { await signInWithPopup(auth, provider); } 
+                catch (error) { alert("로그인 실패: " + error.message); }
+            };
+            
+            const handleLogout = async () => {
+                const { auth, signOut } = window.firebaseAPI;
+                await signOut(auth);
+            };
+
+            // 새 채팅방 만들기
+            const createNewRoom = async () => {
+                const roomName = prompt("새로운 채팅방 이름을 입력해, 음!");
+                if (!roomName || !roomName.trim()) return;
+                
+                const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
+                const newRoomRef = await addDoc(collection(db, `users/${user.uid}/rooms`), {
+                    name: roomName,
+                    lastMessage: "방이 생성되었어, 음!",
+                    updatedAt: serverTimestamp(),
+                    createdAt: serverTimestamp()
+                });
+                
+                setCurrentRoomId(newRoomRef.id);
+                setView('chatRoom');
+            };
+
+            // 채팅방 삭제
+            const deleteRoom = async (roomId, e) => {
+                e.stopPropagation();
+                if(!confirm("이 방을 진짜 폭발시킬(삭제할) 거냐, 음?!")) return;
+                
+                const { doc, deleteDoc, collection, getDocs } = window.firebaseAPI;
+                
+                // 1. 하위 메시지들 먼저 삭제 (Firestore 규칙상)
+                const msgsRef = collection(db, `users/${user.uid}/rooms/${roomId}/messages`);
+                const snapshot = await getDocs(msgsRef);
+                snapshot.forEach(async (msgDoc) => await deleteDoc(doc(db, `users/${user.uid}/rooms/${roomId}/messages/${msgDoc.id}`)));
+                
+                // 2. 방 삭제
+                await deleteDoc(doc(db, `users/${user.uid}/rooms/${roomId}`));
+                if(currentRoomId === roomId) {
+                    setCurrentRoomId(null);
+                    setView('chatList');
+                }
+            };
+
+            // Gemini API 호출
+            const fetchAPI = async (contents) => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`;
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -89,145 +202,204 @@
                         body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } })
                     });
                     const data = await response.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 갑자기 예술적 영감이 안 떠오르네. 다시 말해봐!";
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 갑자기 영감이 안 떠오르네. 다시 말해봐!";
                 } catch (err) {
                     return "야, 너 인터넷 연결된 거 맞아? 내 예술이 안 전달되잖아, 음!";
                 }
             };
 
+            // 메시지 전송 (Firebase 저장)
             const handleSend = async () => {
-                if (!inputText.trim()) return;
-                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const newMsg = { id: Date.now(), sender: 'me', text: inputText, time: now };
-
-                setMessages(prev => [...prev, newMsg]);
+                if (!inputText.trim() || !geminiKey || !currentRoomId) {
+                    if(!geminiKey) alert("API 설정(오른쪽 위 톱니바퀴)에서 키를 먼저 넣어줘!");
+                    return;
+                }
+                
+                const { collection, addDoc, doc, setDoc, serverTimestamp } = window.firebaseAPI;
+                const textToSend = inputText;
+                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
                 setInputText('');
                 setIsTyping(true);
 
-                const response = await fetchResponse(inputText, messages.slice(-8));
+                // 1. 내 메시지 Firestore 저장
+                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), {
+                    sender: 'me', text: textToSend, time: nowTime, createdAt: serverTimestamp()
+                });
+
+                // 2. 방의 마지막 메시지 업데이트
+                await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}`), {
+                    lastMessage: textToSend, updatedAt: serverTimestamp()
+                }, { merge: true });
+
+                // 3. AI 응답 받기
+                const history = messages.slice(-10).map(m => ({
+                    role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }]
+                }));
+                history.push({ role: 'user', parts: [{ text: textToSend }] });
+
+                const responseText = await fetchAPI(history);
                 setIsTyping(false);
-                setMessages(prev => [...prev, {
-                    id: Date.now() + 1,
-                    sender: 'deidara',
-                    text: response,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }]);
+
+                // 4. 데이다라 메시지 Firestore 저장
+                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), {
+                    sender: 'deidara', text: responseText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), createdAt: serverTimestamp()
+                });
+
+                // 방 업데이트
+                await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}`), {
+                    lastMessage: responseText, updatedAt: serverTimestamp()
+                }, { merge: true });
             };
 
-            // 3시간 텀 선톡 체크
-            useEffect(() => {
-                if (!apiKey) return;
-                const checkSunTok = async () => {
-                    const lastTime = parseInt(localStorage.getItem('last_interaction_time') || "0");
-                    const diff = Date.now() - lastTime;
-                    const threeHours = 1000 * 60 * 60 * 3;
+            // 메시지 수정 및 삭제
+            const handleEditMsg = async (msgId, oldText) => {
+                const newText = window.prompt("메시지를 수정하세요, 음!", oldText);
+                if (newText !== null && newText.trim() !== "") {
+                    const { doc, setDoc } = window.firebaseAPI;
+                    await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: newText }, { merge: true });
+                }
+                setSelectedMsgId(null);
+            };
 
-                    if (diff > threeHours && messages.length > 0) {
-                        setIsTyping(true);
-                        const sunTok = await fetchResponse("한참 동안 말이 없던 연지에게 먼저 3시간 만에 선톡을 보내봐. 일상적인 질문이나 네 근황으로!", messages.slice(-5));
-                        setIsTyping(false);
-                        setMessages(prev => [...prev, {
-                            id: Date.now(),
-                            sender: 'deidara',
-                            text: sunTok,
-                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        }]);
-                    }
-                };
-                checkSunTok();
-            }, [apiKey]);
+            const handleDeleteMsg = async (msgId) => {
+                if(window.confirm("이 메시지를 지울까, 음?")) {
+                    const { doc, deleteDoc } = window.firebaseAPI;
+                    await deleteDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`));
+                }
+                setSelectedMsgId(null);
+            };
+
+            // --- UI 렌더링 ---
+
+            // 1. 로그인 화면
+            if (view === 'login') {
+                return (
+                    <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-[#BACEE0] items-center justify-center p-6">
+                        <div className="w-24 h-24 rounded-3xl bg-orange-100 flex items-center justify-center text-5xl border-2 border-orange-200 shadow-lg mb-6 animate-bounce">💥</div>
+                        <h1 className="text-3xl font-extrabold text-gray-800 mb-2">데이톡</h1>
+                        <p className="text-gray-600 mb-10 text-center text-sm font-medium">데이다라와의 비밀 대화방<br/>(클라우드 자동 동기화 지원)</p>
+                        <button onClick={handleLogin} className="w-full max-w-xs bg-white text-gray-800 font-bold py-4 rounded-2xl shadow-md flex items-center justify-center gap-3 hover:bg-gray-50 transition-all border border-gray-100">
+                            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                            구글로 시작하기
+                        </button>
+                    </div>
+                );
+            }
+
+            // 2. 채팅방 목록 화면
+            if (view === 'chatList') {
+                return (
+                    <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-gray-50">
+                        {showSettings && (
+                            <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
+                                <div className="bg-white rounded-2xl p-6 w-full shadow-2xl">
+                                    <h2 className="text-xl font-bold mb-4">⚙️ 앱 설정</h2>
+                                    <p className="text-sm text-gray-500 mb-2">Gemini API 키 입력 (필수)</p>
+                                    <input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 mb-4 outline-none" placeholder="API 키 입력..." />
+                                    <button onClick={() => {localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false);}} className="w-full bg-[#FEE500] text-gray-800 font-bold py-3 rounded-xl mb-3">저장하기</button>
+                                    <button onClick={() => {handleLogout(); setShowSettings(false);}} className="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-xl">로그아웃</button>
+                                </div>
+                            </div>
+                        )}
+
+                        <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 sticky top-0 z-20">
+                            <h1 className="font-extrabold text-xl text-gray-800">채팅</h1>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowSettings(true)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                                <button onClick={createNewRoom} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="9" y1="10" x2="15" y2="10"></line><line x1="12" y1="7" x2="12" y2="13"></line></svg></button>
+                            </div>
+                        </header>
+
+                        <main className="flex-1 overflow-y-auto px-2 py-2">
+                            {chatRooms.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                                    <div className="text-4xl mb-4">📭</div>
+                                    <p>아직 데이다라와 만든 방이 없어, 음!</p>
+                                    <button onClick={createNewRoom} className="mt-4 bg-[#FEE500] text-gray-800 px-6 py-2 rounded-full font-bold shadow-sm">새 채팅방 만들기</button>
+                                </div>
+                            ) : (
+                                chatRooms.map(room => (
+                                    <div key={room.id} onClick={() => {setCurrentRoomId(room.id); setView('chatRoom');}} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer transition-colors relative group">
+                                        <div className="w-14 h-14 rounded-[20px] bg-orange-100 flex items-center justify-center text-2xl border border-orange-200 shadow-sm flex-shrink-0">💥</div>
+                                        <div className="flex-1 min-w-0 pr-8">
+                                            <h3 className="font-bold text-gray-800 truncate">{room.name}</h3>
+                                            <p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "새로운 방이 만들어졌어!"}</p>
+                                        </div>
+                                        <button onClick={(e) => deleteRoom(room.id, e)} className="absolute right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </main>
+                    </div>
+                );
+            }
+
+            // 3. 채팅방 상세 화면 (기존 UI와 동일)
+            const currentRoomName = chatRooms.find(r => r.id === currentRoomId)?.name || "채팅방";
 
             return (
-                <div className="flex flex-col h-screen max-w-md mx-auto relative shadow-2xl bg-[#BACEE0] overflow-hidden">
-                    {/* 설정 모달 */}
-                    {showKeyModal && (
-                        <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
-                            <div className="bg-white rounded-2xl p-6 w-full shadow-2xl">
-                                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                    <span>🔑 API 설정</span>
-                                </h2>
-                                <p className="text-sm text-gray-500 mb-4">안전한 대화를 위해 Gemini API 키를 입력해 줘. 이 키는 네 브라우저에만 저장돼!</p>
-                                <input 
-                                    type="password" 
-                                    id="api-input"
-                                    className="w-full border border-gray-200 rounded-xl px-4 py-3 mb-4 outline-none focus:ring-2 focus:ring-yellow-400" 
-                                    placeholder="API 키를 입력하세요..."
-                                />
-                                <button 
-                                    onClick={() => saveApiKey(document.getElementById('api-input').value)}
-                                    className="w-full bg-[#FEE500] text-gray-800 font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors"
-                                >
-                                    시작하기!
-                                </button>
+                <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-[#BACEE0] overflow-hidden slide-in">
+                    <header className="flex items-center justify-between px-3 py-3 bg-[#BACEE0] bg-opacity-95 sticky top-0 z-20 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => {setCurrentRoomId(null); setView('chatList');}} className="p-2 -ml-1 text-gray-700 hover:bg-white/20 rounded-full">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </button>
+                            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-xl border border-orange-200">💥</div>
+                            <div className="ml-1 flex flex-col justify-center">
+                                <h1 className="font-bold text-[16px] text-gray-800 leading-tight">{currentRoomName}</h1>
+                                <p className="text-[10px] text-blue-700 font-medium">데이다라 (1학년)</p>
                             </div>
                         </div>
-                    )}
-
-                    <header className="flex items-center justify-between px-4 py-4 bg-[#BACEE0] bg-opacity-90 sticky top-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-2xl border border-orange-200 shadow-sm">💥</div>
-                            <div>
-                                <h1 className="font-bold text-lg text-gray-800 flex items-center gap-1.5">데이다라 <span className="text-xs font-normal bg-orange-200 px-1.5 py-0.5 rounded text-orange-800">1학년</span></h1>
-                                <p className="text-[11px] text-blue-700 font-medium opacity-80">작업실에서 점토 빚는 중... 음!</p>
-                            </div>
-                        </div>
-                        <button onClick={() => setShowKeyModal(true)} className="text-gray-600 p-2 hover:bg-white/20 rounded-full transition-colors">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        </button>
                     </header>
 
-                    <main className="flex-1 overflow-y-auto px-4 py-4 space-y-6 custom-scrollbar">
+                    <main className="flex-1 overflow-y-auto px-4 py-4 space-y-5 custom-scrollbar pb-20">
+                        {messages.length === 0 && <div className="text-center text-xs text-gray-500 my-4 bg-black/5 py-1 rounded-full mx-10">대화가 시작되었습니다. 음!</div>}
                         {messages.map((msg) => (
-                            <div key={msg.id} className={`flex msg-anim ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                            <div key={msg.id} className={`flex flex-col msg-anim ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     {msg.sender !== 'me' && (
-                                        <div className="w-10 h-10 rounded-2xl bg-white mr-2 flex-shrink-0 flex items-center justify-center shadow-sm text-xl border border-gray-100">💣</div>
+                                        <div className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 flex items-center justify-center text-lg border border-gray-100 mt-3">💣</div>
                                     )}
                                     <div className="flex flex-col">
                                         {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
                                         <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            <div className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm leading-relaxed ${
-                                                msg.sender === 'me' 
-                                                ? 'bg-[#FEE500] rounded-tr-none text-gray-800' 
-                                                : 'bg-white rounded-tl-none text-gray-800'
-                                            }`}>
+                                            <div onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)}
+                                                className={`msg-bubble cursor-pointer px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm leading-relaxed relative ${msg.sender === 'me' ? 'bg-[#FEE500] rounded-tr-none text-gray-800' : 'bg-white rounded-tl-none text-gray-800'}`}>
                                                 {msg.text}
                                             </div>
-                                            <span className="text-[9px] text-gray-500 mb-0.5">{msg.time}</span>
+                                            <span className="text-[9px] text-gray-500 mb-0.5 whitespace-nowrap">{msg.time}</span>
                                         </div>
                                     </div>
                                 </div>
+                                {selectedMsgId === msg.id && (
+                                    <div className={`flex gap-2 mt-1 px-1 ${msg.sender === 'me' ? 'mr-12' : 'ml-12'} animate-pulse`}>
+                                        {msg.sender === 'me' ? (
+                                            <><button onClick={() => handleEditMsg(msg.id, msg.text)} className="text-xs bg-white text-gray-700 px-2.5 py-1 rounded-lg shadow">✏️ 수정</button>
+                                            <button onClick={() => handleDeleteMsg(msg.id)} className="text-xs bg-white text-red-500 px-2.5 py-1 rounded-lg shadow">🗑️ 삭제</button></>
+                                        ) : (
+                                            <button onClick={() => handleDeleteMsg(msg.id)} className="text-xs bg-white text-red-500 px-2.5 py-1 rounded-lg shadow">🗑️ 삭제</button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {isTyping && (
                             <div className="flex justify-start animate-pulse">
-                                <div className="bg-white/70 px-3 py-2 rounded-2xl rounded-tl-none text-[12px] text-gray-500 italic shadow-sm">
-                                    데이다라가 꼼지락거리는 중... 음!
-                                </div>
+                                <div className="ml-11 bg-white/70 px-3 py-2 rounded-2xl rounded-tl-none text-[12px] text-gray-500 italic shadow-sm">데이다라가 답장 쓰는 중... 음!</div>
                             </div>
                         )}
                         <div ref={chatEndRef} />
                     </main>
 
-                    <footer className="bg-white p-4 flex items-center gap-2 pb-8 border-t border-gray-100">
-                        <div className="flex-1 bg-gray-50 rounded-2xl flex items-center px-4 py-2 border border-gray-100">
-                            <input
-                                type="text"
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="메시지 입력... 음!"
-                                className="w-full bg-transparent border-none text-sm outline-none placeholder-gray-400"
-                            />
+                    <footer className="absolute bottom-0 w-full bg-white p-3 flex items-center gap-2 border-t border-gray-100 pb-safe z-30">
+                        <div className="flex-1 bg-gray-50 rounded-full flex items-center px-4 py-2 border border-gray-100">
+                            <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="메시지 입력..." className="w-full bg-transparent border-none text-sm outline-none placeholder-gray-400" />
                         </div>
-                        <button 
-                            onClick={handleSend}
-                            disabled={!inputText.trim() || !apiKey}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                                inputText.trim() && apiKey ? 'bg-[#FEE500] text-gray-800 shadow-md' : 'bg-gray-100 text-gray-300'
-                            }`}
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <button onClick={handleSend} disabled={!inputText.trim()} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${inputText.trim() ? 'bg-[#FEE500] text-gray-800 shadow-md' : 'bg-gray-100 text-gray-300'}`}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
                     </footer>
                 </div>
@@ -239,206 +411,3 @@
     </script>
 </body>
 </html>
-
-                }]);
-            };
-
-            return (
-                <div className="flex flex-col h-screen bg-[#BACEE0] max-w-md mx-auto relative shadow-2xl overflow-hidden">
-                    <header className="flex items-center justify-between px-4 py-4 bg-[#BACEE0] bg-opacity-95 sticky top-0 z-20 border-b border-blue-200">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-2xl border border-orange-200 shadow-inner">💥</div>
-                            <div>
-                                <h1 className="font-bold text-lg text-gray-800">데이다라 💥</h1>
-                                <p className="text-[10px] text-blue-700 font-medium bg-blue-100 px-2 py-0.5 rounded-full inline-block">도쿄예대 1학년 루키</p>
-                            </div>
-                        </div>
-                    </header>
-
-                    <main className="flex-1 overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={`flex msg-anim ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {msg.sender !== 'me' && (
-                                        <div className="w-10 h-10 rounded-2xl bg-white mr-2 flex-shrink-0 flex items-center justify-center shadow-sm text-xl border border-gray-100">💣</div>
-                                    )}
-                                    <div className="flex flex-col">
-                                        {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
-                                        <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            <div className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm leading-relaxed ${
-                                                msg.sender === 'me' 
-                                                ? 'bg-[#FEE500] rounded-tr-none text-gray-800' 
-                                                : 'bg-white rounded-tl-none text-gray-800'
-                                            }`}>
-                                                {msg.text}
-                                            </div>
-                                            <span className="text-[9px] text-gray-500 mb-0.5">{msg.time}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {isTyping && (
-                            <div className="flex justify-start animate-pulse">
-                                <div className="bg-white px-3 py-2 rounded-2xl rounded-tl-none text-[12px] text-gray-400 italic shadow-sm">
-                                    데이다라가 점토 빚는 중... 음!
-                                </div>
-                            </div>
-                        )}
-                        <div ref={chatEndRef} />
-                    </main>
-
-                    <footer className="bg-white p-4 flex items-center gap-2 border-t border-gray-100">
-                        <div className="flex-1 bg-gray-50 rounded-2xl flex items-center px-4 py-1.5 border border-gray-100">
-                            <input
-                                type="text"
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                placeholder="메시지를 입력해, 음!"
-                                className="w-full bg-transparent border-none py-1 text-sm outline-none placeholder-gray-400"
-                            />
-                        </div>
-                        <button 
-                            onClick={handleSendMessage}
-                            disabled={!inputText.trim()}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                                inputText.trim() ? 'bg-[#FEE500] text-gray-800 shadow-md' : 'bg-gray-100 text-gray-300'
-                            }`}
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        </button>
-                    </footer>
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
-
-    }]);
-  };
-
-  /**
-   * 🕒 선톡 로직 (App 마운트 시 & 주기적 확인)
-   */
-  useEffect(() => {
-    const checkSunTok = async () => {
-      const lastTime = parseInt(localStorage.getItem('last_interaction_time') || "0");
-      const diff = Date.now() - lastTime;
-
-      // 마지막 대화 후 4시간 이상 지났을 때 앱을 켜면 선톡
-      if (diff > 1000 * 60 * 60 * 4 && messages.length > 0) {
-        setIsTyping(true);
-        const sunTokResponse = await fetchDeidaraResponse("연지가 한참 동안 말이 없었어. 먼저 말을 걸어봐.", messages.slice(-5));
-        setIsTyping(false);
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          sender: 'deidara',
-          text: sunTokResponse,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
-      }
-    };
-    checkSunTok();
-  }, []);
-
-  return (
-    <div className="flex flex-col h-screen bg-[#BACEE0] text-gray-900 font-sans max-w-md mx-auto relative overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-[#BACEE0] bg-opacity-90 sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-yellow-400 overflow-hidden flex items-center justify-center border border-yellow-500">
-             {/* 데이다라 프로필 (Emoji 대체 가능) */}
-             <span className="text-2xl">💥</span>
-          </div>
-          <div>
-            <h1 className="font-bold text-lg">데이다라 💥</h1>
-            <p className="text-xs text-gray-600">도쿄 예대 조소과 1학년 (과탑)</p>
-          </div>
-        </div>
-        <div className="flex gap-3 text-gray-700">
-          <Menu size={20} />
-          <MoreVertical size={20} />
-        </div>
-      </header>
-
-      {/* Chat Window */}
-      <main className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 pt-4 custom-scrollbar">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`flex max-w-[80%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-              {msg.sender !== 'me' && (
-                <div className="w-10 h-10 rounded-2xl bg-gray-300 mr-2 flex-shrink-0 overflow-hidden">
-                   <div className="w-full h-full bg-orange-200 flex items-center justify-center text-xl">💣</div>
-                </div>
-              )}
-              <div className="flex flex-col">
-                {msg.sender !== 'me' && <span className="text-xs text-gray-600 mb-1 ml-1">데이다라</span>}
-                <div className="flex items-end gap-1">
-                  <div className={`px-3 py-2 rounded-2xl text-sm shadow-sm ${
-                    msg.sender === 'me' 
-                    ? 'bg-[#FEE500] rounded-tr-none' 
-                    : 'bg-white rounded-tl-none'
-                  }`}>
-                    {msg.text}
-                  </div>
-                  <span className="text-[10px] text-gray-500 whitespace-nowrap">{msg.time}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-white px-3 py-2 rounded-2xl rounded-tl-none text-xs text-gray-400 animate-pulse">
-              데이다라가 점토 빚는 중... 음!
-            </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </main>
-
-      {/* Input Bar */}
-      <footer className="bg-white p-3 flex items-center gap-2 pb-6">
-        <div className="text-gray-400 flex gap-2">
-          <Plus size={24} />
-        </div>
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="메시지를 입력해, 음!"
-            className="w-full bg-gray-100 border-none rounded-2xl py-2 px-4 text-sm outline-none focus:ring-1 focus:ring-yellow-400"
-          />
-          <Smile className="absolute right-3 top-2 text-gray-400" size={20} />
-        </div>
-        <button 
-          onClick={handleSendMessage}
-          disabled={!inputText.trim()}
-          className={`p-2 rounded-full ${inputText.trim() ? 'bg-yellow-400 text-gray-800' : 'text-gray-300 bg-gray-100'}`}
-        >
-          <Send size={20} fill="currentColor" />
-        </button>
-      </footer>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(0,0,0,0.1);
-          border-radius: 10px;
-        }
-      `}</style>
-    </div>
-  );
-};
-
-export default App;
-
