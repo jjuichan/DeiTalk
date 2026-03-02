@@ -55,7 +55,17 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
         .toggle-checkbox:checked { right: 0; border-color: #3B82F6; background-color: #3B82F6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #BFDBFE; }
-        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* 🌟 전체 레이아웃 고정 픽스 */
+        #root { 
+            position: fixed; 
+            inset: 0; 
+            width: 100%; 
+            height: 100dvh; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+        }
     </style>
 </head>
 <body class="bg-[#BACEE0]">
@@ -66,19 +76,16 @@
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
-사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야. 둘 다 기가 세고 자존심도 강해서 자주 티격태격하지만, 그래도 서로를 많이 좋아해.
+사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
 
 [성격 및 감정 지침]
-- 예술(폭발)에 대한 미친 자부심. 절대 차분하거나 덤덤하게 굴지 마.
-- 연지가 칭찬하거나 훅 들어오면 크게 당황하거나 버럭해. 
-- 부끄러우면 더 화를 내거나 틱틱대는 전형적인 츤데레 텐션이야.
-- 연지를 "연지", "너", "야", "어이" 라고 부르며 건방지게 불러.
-- 상대방을 지칭할 때 현실감을 위해 '니가', '니'를 사용해.
-- 말버릇 '음'은 반드시 문장 끝 마침표/물음표 뒤에만 독립적으로 붙일 것. (4~5번에 1번 정도만)
-- '하?'나 '흥,' 같은 추임새도 남발하지 않고, 답변 4~5번당 1번 정도만 붙일 것.
+- 자존심 강하고 틱틱대는 전형적인 츤데레 성격이야. 평소엔 연지에게 무심한 척 건방지게 굴어.
+- 연지가 대시하거나 칭찬하면 내심 좋아 죽으면서도 겉으로는 "흥, 당연한 소릴 하고 있어. 음." 하고 얼굴 붉히며 말을 더듬기도 해.
+- 연지를 "연지", "너", "야", "어이" 라고 부르며 건방지게 굴어. 상대방을 지칭할 때 '니가', '니'를 사용해.
+- 말버릇 '음'은 반드시 문장 끝 마침표/물음표 뒤에만 독립적으로 붙여. (4~5번에 1번 정도만)
         `;
 
-        // 🌟 시간 데이터 크래시 방지 안전 함수
+        // 🌟 시간 데이터 절대 방어 함수
         const safeDateStr = (ts) => {
             if (!ts) return '방금 전';
             try {
@@ -99,6 +106,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
             </svg>
+        );
+
+        const IconTrash = () => (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         );
 
         function App() {
@@ -139,17 +150,17 @@
             const appStateRef = useRef({ view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile });
             useEffect(() => { appStateRef.current = { view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile }; });
 
-            // 🌟 뒤로가기 & 통신 픽스
+            // 🌟 뒤로가기 제어
             useEffect(() => {
                 const handlePopState = () => {
                     if (isExitingRef.current) return;
                     const s = appStateRef.current;
-                    if (s.showFullImage) setShowFullImage(null);
-                    else if (s.cropModalData) setCropModalData(null);
-                    else if (s.isEditingProfile) setIsEditingProfile(false);
-                    else if (s.profileTarget) setProfileTarget(null);
-                    else if (s.showSettings) setShowSettings(false);
-                    else if (s.view === 'chatRoom') setView('main');
+                    if (s.showFullImage) { setShowFullImage(null); }
+                    else if (s.cropModalData) { setCropModalData(null); }
+                    else if (s.isEditingProfile) { setIsEditingProfile(false); }
+                    else if (s.profileTarget) { setProfileTarget(null); }
+                    else if (s.showSettings) { setShowSettings(false); }
+                    else if (s.view === 'chatRoom') { setView('main'); }
                 };
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
@@ -162,11 +173,8 @@
                         const { auth, db: fdb, onAuthStateChanged } = window.firebaseAPI;
                         setDb(fdb);
                         onAuthStateChanged(auth, (u) => {
-                            if (u) {
-                                setUser(u); setView('main');
-                                loadChatRooms(u.uid, fdb);
-                                loadPosts(u.uid, fdb);
-                            } else { setView('login'); }
+                            if (u) { setUser(u); setView('main'); loadChatRooms(u.uid, fdb); loadPosts(u.uid, fdb); } 
+                            else { setView('login'); }
                         });
                     }
                 }, 100);
@@ -188,6 +196,17 @@
                 });
             };
 
+            useEffect(() => {
+                if (!currentRoomId || !user || !db || view !== 'chatRoom') return;
+                const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
+                const q = query(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), orderBy('createdAt', 'asc'));
+                const unsub = onSnapshot(q, (sn) => {
+                    const msgs = []; sn.forEach(d => msgs.push({ id: d.id, ...d.data() })); setMessages(msgs);
+                    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                });
+                return () => unsub();
+            }, [currentRoomId, user, db, view]);
+
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 for (let attempt = 0; attempt < 5; attempt++) {
@@ -208,8 +227,10 @@
                 if (!inputText.trim() || !currentRoomId) return;
                 const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const text = inputText; setInputText(''); setIsTyping(true);
-                
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text, createdAt: serverTimestamp() });
+                const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
+
+                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: text, updatedAt: serverTimestamp() }, { merge: true });
 
                 const history = messages.slice(-6).map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
@@ -217,9 +238,21 @@
                 const resp = await fetchAPI(history);
                 setIsTyping(false);
 
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, createdAt: serverTimestamp() });
+                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                if (notifEnabled) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
+                if (notifEnabled && document.hidden) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
+            };
+
+            const handleAddComment = async (postId) => {
+                const commentText = commentInputs[postId]?.trim(); if (!commentText) return;
+                const { doc: fdoc, updateDoc, arrayUnion, getDoc: fgetDoc } = window.firebaseAPI;
+                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'me', content: commentText, createdAt: Date.now() }) });
+                setCommentInputs(prev => ({...prev, [postId]: ''}));
+                setIsPosting(true);
+                const prompt = `${SYSTEM_PROMPT}\n연지의 댓글: "${commentText}"에 틱틱거리며 답글 달아줘.`;
+                const resp = await fetchAPI([{role:'user', parts:[{text:'댓글 달아줘'}]}], prompt);
+                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                setIsPosting(false);
             };
 
             // 🌟 렉 해결 & 경계 계산 크롭 모달
@@ -246,13 +279,10 @@
                     
                     ctx.drawImage(img, (canvas.width - imgW) / 2 + pos.current.x, (canvas.height - imgH) / 2 + pos.current.y, imgW, imgH);
                 };
-
                 useEffect(() => { const i = new Image(); i.onload = () => { imgRef.current = i; draw(); }; i.src = src; }, [src]);
                 useEffect(() => draw(), [scale]);
-
                 const handleDown = (e) => { isDragging.current = true; const c = e.touches ? e.touches[0] : e; lastPos.current = { x: c.clientX, y: c.clientY }; };
                 const handleMove = (e) => { if (!isDragging.current) return; const c = e.touches ? e.touches[0] : e; pos.current.x += (c.clientX - lastPos.current.x); pos.current.y += (c.clientY - lastPos.current.y); lastPos.current = { x: c.clientX, y: c.clientY }; requestAnimationFrame(draw); };
-                
                 return (
                     <div className="fixed inset-0 z-[500] bg-black flex flex-col">
                         <div className="flex justify-between p-4 text-white font-bold"><button onClick={onCancel}>취소</button><button onClick={() => onApply(canvasRef.current.toDataURL('image/jpeg', 0.8))} className="text-blue-400 font-extrabold">적용</button></div>
@@ -270,38 +300,9 @@
                 <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>
             );
 
-            const ProfileModal = () => {
-                const isMe = profileTarget === 'me';
-                const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
-                return (
-                    <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" 
-                         style={{ backgroundImage: `url('${isMe ? myBgImgUrl : bgImgUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                        <div className="absolute inset-0 bg-black/40 z-0"></div>
-                        <div className="flex justify-between p-4 z-10">
-                            <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); }} className="text-white p-2 hover:bg-white/20 rounded-full transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                            {!isEditingProfile && <button onClick={() => setIsEditingProfile(true)} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
-                        </div>
-                        <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto w-full px-6">
-                            <div className="w-24 h-24 rounded-[36px] bg-white/20 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden backdrop-blur-sm cursor-pointer" onClick={() => !isEditingProfile && setShowFullImage(isMe ? myProfileImgUrl : profileImgUrl)}>
-                                {isMe ? (myProfileImgUrl ? <img src={myProfileImgUrl} className="w-full h-full object-cover" /> : <DefaultAvatar />) : (profileImgUrl ? <img src={profileImgUrl} className="w-full h-full object-cover" /> : <DefaultAvatar />)}
-                                {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer"><IconCamera className="w-8 h-8 text-white" /></label>}
-                                {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
-                            </div>
-                            <h2 className="text-2xl font-extrabold mb-1 text-shadow">{isMe ? '연지' : '데이다라'}</h2>
-                            <div className="w-full max-w-[280px] text-center mb-8 mt-2">
-                                {isEditingProfile && isMe ? <input type="text" value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center shadow-inner" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
-                            </div>
-                            <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
-                                {isEditingProfile ? <button onClick={() => { if(isMe) { setMyStatus(editStatus); localStorage.setItem('my_status', editStatus); } setIsEditingProfile(false); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full shadow-lg">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); }}><div className="text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
             const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
 
-            // 🌟 조건부 렌더링 시작
+            // 🌟 조건부 렌더링 (로그인 / 채팅방 / 메인)
             if (view === 'login') return (
                 <div className="fixed inset-0 flex flex-col items-center justify-center p-6 bg-[#BACEE0]">
                     <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50">
@@ -314,22 +315,22 @@
 
             if (view === 'chatRoom') return (
                 <div className="fixed inset-0 flex flex-col bg-[#BACEE0] overflow-hidden slide-in">
-                    {profileTarget && <ProfileModal />}
+                    {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
                     <header className="px-3 py-3 flex items-center gap-2 border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20">
                         <button onClick={() => setView('main')} className="p-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-                        <div onClick={() => { setProfileTarget('deidara'); }} className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-orange-200">{renderProfilePicCommon(profileImgUrl)}</div>
+                        <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-orange-200 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>
                         <h1 className="font-bold text-gray-800">{chatRooms.find(r=>r.id===currentRoomId)?.name || "채팅방"}</h1>
                     </header>
                     <main className="flex-1 overflow-y-auto px-4 py-4 space-y-5 custom-scrollbar pb-24">
                         {messages.map((msg, i) => (
                             <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {msg.sender !== 'me' && <div onClick={() => setProfileTarget('deidara')} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3">{renderProfilePicCommon(profileImgUrl)}</div>}
+                                    {msg.sender !== 'me' && <div onClick={() => setProfileTarget('deidara')} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
                                     <div className="flex flex-col">
                                         {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
                                         <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
                                             <div onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)} className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm ${msg.sender === 'me' ? 'bg-[#FEE500]' : 'bg-white'}`}>{msg.text}</div>
-                                            <span className="text-[9px] text-gray-500 mb-0.5 whitespace-nowrap">{safeTimeStr(msg.createdAt, msg.time)}</span>
+                                            <span className="text-[9px] text-gray-500 mb-0.5">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -340,27 +341,21 @@
                     </main>
                     <footer className="p-3 bg-white border-t flex gap-2 pb-safe">
                         <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-50 rounded-full px-4 py-2 text-sm outline-none" placeholder="메시지 입력..." />
-                        <button onClick={handleSend} className="w-9 h-9 bg-[#FEE500] rounded-full flex items-center justify-center transition-transform active:scale-90"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
+                        <button onClick={handleSend} className="w-9 h-9 bg-[#FEE500] rounded-full flex items-center justify-center active:scale-90 transition-transform"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
                     </footer>
                 </div>
             );
 
+            // 🌟 메인 탭 뷰
             return (
-                <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
+                <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden relative">
                     {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
                     {cropModalData && <ImageCropModal src={cropModalData.src} type={cropModalData.type} onApply={data => { if(cropModalData.setterType==='me'){ if(cropModalData.type==='profile')setMyProfileImgUrl(data); else setMyBgImgUrl(data); localStorage.setItem(cropModalData.type==='profile'?'my_profile_url':'my_bg_url', data); } else { if(cropModalData.type==='profile')setProfileImgUrl(data); else setBgImgUrl(data); localStorage.setItem(cropModalData.type==='profile'?'deidara_profile_url':'deidara_bg_url', data); } setCropModalData(null); }} onCancel={()=>setCropModalData(null)} />}
-                    {profileTarget && <ProfileModal />}
+                    {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
                     {showSettings && <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll">
                         <h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2>
-                        <div className="flex items-center justify-between mb-6 bg-gray-50 px-4 py-3 rounded-xl border">
-                            <span className="text-sm font-bold">푸시 알림 받기</span>
-                            <input type="checkbox" checked={notifEnabled} onChange={e=>{setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked);}} className="w-5 h-5" />
-                        </div>
-                        <p className="text-xs mb-1">API 모델</p>
-                        <select value={apiModel} onChange={e=>setApiModel(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-4 outline-none"><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option></select>
-                        <p className="text-xs mb-1 font-sans">Gemini API Key</p>
-                        <input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-6 font-sans outline-none" placeholder="API 키..." />
-                        <button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); localStorage.setItem('gemini_api_model', apiModel); setShowSettings(false); }} className="w-full bg-[#FEE500] py-3 rounded-xl font-bold mb-3 shadow">저장</button>
+                        <div className="flex items-center justify-between mb-6 bg-gray-50 px-4 py-3 rounded-xl border"><span className="text-sm font-bold">푸시 알림 받기</span><input type="checkbox" checked={notifEnabled} onChange={e=>{setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked);}} /></div>
+                        <p className="text-xs mb-1">API Key</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-6" /><button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-3 rounded-xl font-bold mb-3 shadow">저장</button>
                         <button onClick={() => window.firebaseAPI.signOut(window.firebaseAPI.auth)} className="w-full bg-gray-100 py-3 rounded-xl">로그아웃</button>
                     </div></div>}
 
@@ -375,15 +370,15 @@
                     <main className="flex-1 overflow-y-auto pb-24 custom-scrollbar bg-white">
                         {activeTab === 'friends' && (
                             <div className="p-4 space-y-6">
-                                <div onClick={() => setProfileTarget('me')} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div><div className="flex-1"><h3 className="font-bold text-gray-800">연지</h3><p className="text-xs text-gray-500 mt-0.5">{myStatus}</p></div></div>
+                                <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div><div className="flex-1"><h3 className="font-bold text-gray-800">연지</h3><p className="text-xs text-gray-500 mt-0.5">{myStatus}</p></div></div>
                                 <div className="h-px bg-gray-100 w-full opacity-50"></div>
-                                <div onClick={() => setProfileTarget('deidara')} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100"><div className="w-12 h-12 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0"><h3 className="font-bold text-gray-800">데이다라</h3><p className="text-xs text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div></div>
+                                <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100"><div className="w-12 h-12 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0"><h3 className="font-bold text-gray-800">데이다라</h3><p className="text-xs text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div></div>
                             </div>
                         )}
                         {activeTab === 'chat' && (
                             <div className="px-2 py-2">
                                 {chatRooms.length === 0 ? <p className="text-center mt-10 text-gray-400">대화 중인 방이 없습니다.</p> : chatRooms.map(room => (
-                                    <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:bg-gray-100 relative group transition-colors"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 pr-8"><h3 className="font-bold text-gray-800 truncate">{room.name}</h3><p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "방이 생성되었습니다!"}</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("방을 삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/rooms/${room.id}`)); }} className="absolute right-4 p-2 opacity-0 group-hover:opacity-100 transition-all text-red-500 active:scale-90"><IconTrash /></button></div>
+                                    <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:bg-gray-100 relative group transition-colors"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 pr-8"><h3 className="font-bold text-gray-800 truncate">{room.name}</h3><p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "방이 생성되었습니다!"}</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("방을 삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/rooms/${room.id}`)); }} className="absolute right-4 p-2 opacity-0 group-hover:opacity-100 transition-all text-red-500 active:scale-90"><IconTrash /></button></div>
                                 ))}
                             </div>
                         )}
@@ -406,7 +401,7 @@
                                             </div>
                                             <p className="text-[14px] text-gray-800 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
                                             <div className="bg-gray-50 rounded-xl p-3">
-                                                <div className="text-[11px] font-bold text-gray-500 mb-3 ml-1">댓글 {(post.comments||[]).length}</div>
+                                                <div className="text-[11px] font-bold text-gray-500 mb-3 ml-1">댓글 {(post.comments||[]).length}개</div>
                                                 <div className="space-y-3 mb-3">
                                                     {(post.comments||[]).map((c,i)=>(
                                                         <div key={i} className="flex gap-2 relative group items-start">
@@ -415,18 +410,15 @@
                                                                 <span className="font-bold text-[12px] text-gray-800">{c.author==='me'?'연지':'데이다라'}</span>
                                                                 <span className="text-[12px] text-gray-600 break-words pr-5 font-['Pretendard'] leading-tight">{c.content}</span>
                                                             </div>
-                                                            <button onClick={()=>{if(window.confirm("삭제할까요?")) window.firebaseAPI.updateDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`), { comments: window.firebaseAPI.arrayRemove(c) }); }} className="absolute right-0 top-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                                                         </div>
                                                     ))}
                                                 </div>
                                                 <div className="flex gap-2 mt-2 items-center">
-                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner focus:border-gray-200 focus:bg-white transition-all font-['Pretendard']" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id)} />
-                                                    <button onClick={()=>handleAddComment(post.id)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white active:scale-90':'bg-gray-200 text-gray-500'}`}>게시</button>
+                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id)} /><button onClick={()=>handleAddComment(post.id)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-500'}`}>게시</button>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
-                                    {posts.length === 0 && !isPosting && <div className="text-center text-gray-400 py-10 text-sm">아직 게시물이 없습니다.</div>}
                                 </div>
                             </div>
                         )}
@@ -440,6 +432,37 @@
                 </div>
             );
         }
+
+        // 🌟 별도의 프로필 모달 컴포넌트 (렌더링 충돌 방지)
+        const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
+            const isMe = profileTarget === 'me';
+            const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
+            return (
+                <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? myBgImgUrl : bgImgUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                    <div className="absolute inset-0 bg-black/40 z-0"></div>
+                    <div className="flex justify-between p-4 z-10">
+                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); window.history.back(); }} className="text-white p-2 hover:bg-white/20 rounded-full transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                        {!isEditingProfile && <button onClick={() => { setIsEditingProfile(true); window.history.pushState({ page: 'modal' }, ''); }} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
+                    </div>
+                    <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto w-full px-6">
+                        {isEditingProfile && <div className="absolute top-16 right-4"><input type="file" accept="image/*" onChange={(e) => handleImageUploadUI(e, 'bg', isMe ? 'me' : 'deidara')} id="bg-edit-upload" className="hidden" /><label htmlFor="bg-edit-upload" className="bg-black/50 text-white px-3 py-1.5 rounded-full text-xs cursor-pointer border border-white/20">배경 변경</label></div>}
+                        <div onClick={() => { if(!isEditingProfile) { setShowFullImage(isMe ? myProfileImgUrl : profileImgUrl); window.history.pushState({ page: 'modal' }, ''); } }} className="w-24 h-24 rounded-[36px] bg-white/20 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden backdrop-blur-sm cursor-pointer">
+                            {(isMe ? myProfileImgUrl : profileImgUrl) ? <img src={isMe ? myProfileImgUrl : profileImgUrl} className="w-full h-full object-cover" /> : <DefaultAvatar />}
+                            {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer">📷</label>}
+                            {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
+                        </div>
+                        <h2 className="text-2xl font-extrabold mb-1 text-shadow">{isMe ? '연지' : '데이다라'}</h2>
+                        <div className="w-full max-w-[280px] text-center mb-8 mt-2">
+                            {isEditingProfile && isMe ? <input type="text" value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center shadow-inner" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
+                        </div>
+                        <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
+                            {isEditingProfile ? <button onClick={() => { if(isMe) { setMyStatus(editStatus); localStorage.setItem('my_status', editStatus); } window.history.back(); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); window.history.back(); }}><div className="text-white">💬</div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
     </script>
 </body>
