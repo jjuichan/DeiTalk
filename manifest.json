@@ -1,0 +1,21 @@
+{
+  "name": "데이다라 톡",
+  "short_name": "데이톡",
+  "description": "19살 천재 조소과 데이다라와의 비밀 대화",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#BACEE0",
+  "theme_color": "#BACEE0",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
