@@ -243,6 +243,60 @@
                 if (notifEnabled && document.hidden) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
             };
 
+            // 🌟 누락되었던 피드 게시물 등록 함수 추가
+            const handleAddPost = async () => {
+                if (!postInput.trim() || !user || !db) return;
+                setIsPosting(true);
+                const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
+                try {
+                    await addDoc(collection(db, `users/${user.uid}/posts`), {
+                        author: 'me',
+                        content: postInput,
+                        createdAt: serverTimestamp(),
+                        comments: []
+                    });
+                    setPostInput('');
+                } catch (e) {
+                    console.error("게시물 업로드 실패:", e);
+                } finally {
+                    setIsPosting(false);
+                }
+            };
+
+            // 🌟 누락되었던 데이다라 피드 자동 생성 함수 추가
+            const handleDeidaraNewPost = async () => {
+                if (!user || !db) return;
+                setIsPosting(true);
+                const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
+                try {
+                    const prompt = `${SYSTEM_PROMPT}\n연지가 피드를 업데이트하라고 재촉했어. 네가 지금 학교에서 조소 과제를 하거나 일상에서 느끼는 감정을 틱틱거리면서 짧게(1~3문장) SNS 피드 형식으로 남겨봐.`;
+                    const resp = await fetchAPI([{role:'user', parts:[{text:'SNS 피드 하나 작성해 줘.'}]}], prompt);
+                    
+                    await addDoc(collection(db, `users/${user.uid}/posts`), {
+                        author: 'deidara',
+                        content: resp,
+                        createdAt: serverTimestamp(),
+                        comments: []
+                    });
+                } catch (e) {
+                    console.error("데이다라 게시물 생성 실패:", e);
+                } finally {
+                    setIsPosting(false);
+                }
+            };
+
+            // 🌟 누락되었던 이미지 업로드 핸들러 추가
+            const handleImageUploadUI = (e, type, target) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setCropModalData({ src: event.target.result, type: type, setterType: target });
+                };
+                reader.readAsDataURL(file);
+                e.target.value = ''; // 같은 파일을 다시 선택할 수 있도록 초기화
+            };
+
             const handleAddComment = async (postId) => {
                 const commentText = commentInputs[postId]?.trim(); if (!commentText) return;
                 const { doc: fdoc, updateDoc, arrayUnion, getDoc: fgetDoc } = window.firebaseAPI;
@@ -387,8 +441,8 @@
                                 <div className="bg-white p-4 mb-3 shadow-sm">
                                     <textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="무슨 생각을 하고 계신가요?" className="w-full bg-gray-50 rounded-xl p-3 text-sm outline-none resize-none border border-gray-50 focus:bg-white transition-all font-['Pretendard']" rows="3"></textarea>
                                     <div className="flex justify-between items-center mt-2">
-                                        <button onClick={handleDeidaraNewPost} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg">피드 업데이트</button>
-                                        <button onClick={handleAddPost} disabled={!postInput.trim()} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${postInput.trim() ? 'bg-blue-500 text-white active:scale-95' : 'bg-gray-200 text-gray-400'}`}>올리기</button>
+                                        <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg disabled:opacity-50">피드 업데이트</button>
+                                        <button onClick={handleAddPost} disabled={!postInput.trim() || isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${(postInput.trim() && !isPosting) ? 'bg-blue-500 text-white active:scale-95' : 'bg-gray-200 text-gray-400'}`}>올리기</button>
                                     </div>
                                 </div>
                                 <div className="space-y-3 px-3">
