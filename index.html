@@ -22,15 +22,15 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 🚨 여기에 연지의 Firebase 설정값을 넣어야 해! 🚨
         const firebaseConfig = {
-            apiKey: "AIzaSyXXXXXXXXXXXXX",
-            authDomain: "deidara-talk.firebaseapp.com",
-            projectId: "deidara-talk",
-            storageBucket: "deidara-talk.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdefg"
-        };
+        apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
+        authDomain: "deitalk-9107c.firebaseapp.com",
+        projectId: "deitalk-9107c",
+        storageBucket: "deitalk-9107c.firebasestorage.app",
+        messagingSenderId: "710740822953",
+        appId: "1:710740822953:web:73416a2d69ff984efe92b8",
+        measurementId: "G-QYDP8692TD"
+      };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
