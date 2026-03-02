@@ -22,14 +22,15 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 🚨 여기에 연지의 Firebase 설정값을 넣어야 해! 🚨
+        // 🌟 연지의 고정 Firebase 설정값 적용 완료!
         const firebaseConfig = {
-            apiKey: "AIzaSyXXXXXXXXXXXXX",
-            authDomain: "deidara-talk.firebaseapp.com",
-            projectId: "deidara-talk",
-            storageBucket: "deidara-talk.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdefg"
+            apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
+            authDomain: "deitalk-9107c.firebaseapp.com",
+            projectId: "deitalk-9107c",
+            storageBucket: "deitalk-9107c.firebasestorage.app",
+            messagingSenderId: "710740822953",
+            appId: "1:710740822953:web:73416a2d69ff984efe92b8",
+            measurementId: "G-QYDP8692TD"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -60,10 +61,11 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
+        // 🌟 프롬프트 수정: "음" 사용 빈도를 자연스럽게 조정
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
-말투: 반드시 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 붙여. 연지를 "연지"라고 부르고 4살 연상이지만 누나라고 안 부르려고 버텨.
+말투: 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 잦은 빈도로 자연스럽게 사용해 (모든 문장에 강제할 필요는 없어). 연지를 "연지"라고 부르고 4살 연상이지만 누나라고 안 부르려고 버텨.
 연지의 일상과 감정에 관심 가져주고 츤데레처럼 굴어. 짧고 현실적인 카톡 말투를 써.
         `;
 
@@ -237,7 +239,7 @@
                 setShowSettings(false);
             };
 
-            // 🌟 프사 렌더링 도우미 함수 (이미지가 있으면 이미지, 없으면 이모지)
+            // 🌟 프사 렌더링 도우미 함수
             const renderProfilePic = (className, emoji = "💥") => {
                 return profileImgUrl ? (
                     <img src={profileImgUrl} alt="데이다라" className={`${className} object-cover w-full h-full`} />
@@ -250,7 +252,6 @@
             const ProfileModal = () => (
                 <div className="absolute inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" 
                      style={{ 
-                         // 배사 이미지가 있으면 그걸 띄우고, 없으면 오렌지 그라데이션
                          backgroundImage: bgImgUrl ? `url('${bgImgUrl}')` : 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
                          backgroundSize: 'cover',
                          backgroundPosition: 'center'
@@ -265,10 +266,8 @@
                     </div>
                     
                     <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto">
-                        {/* 프로필 이미지 (설정된 이미지 or 이모지) */}
                         <div className="w-24 h-24 rounded-[36px] bg-orange-100 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden">
                             {renderProfilePic("w-full h-full")}
-                            {/* 상태 초록불 */}
                             <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full z-10"></div>
                         </div>
                         <h2 className="text-2xl font-extrabold mb-1 text-shadow tracking-wide">데이다라</h2>
@@ -318,7 +317,6 @@
                     <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-gray-50">
                         {showProfile && <ProfileModal />}
                         
-                        {/* 🌟 설정 창 업데이트 (프사/배사 주소 입력 란 추가) */}
                         {showSettings && (
                             <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
                                 <div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[80vh] overflow-y-auto setting-scroll">
@@ -355,7 +353,6 @@
                         <main className="flex-1 overflow-y-auto px-2 py-2">
                             {chatRooms.map(room => (
                                 <div key={room.id} onClick={() => {setCurrentRoomId(room.id); setView('chatRoom');}} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer transition-colors relative group">
-                                    {/* 🌟 채팅방 목록 프사 (사진 적용) */}
                                     <div onClick={(e) => { e.stopPropagation(); setShowProfile(true); }} className="w-14 h-14 rounded-[20px] bg-orange-100 flex items-center justify-center text-2xl border border-orange-200 shadow-sm flex-shrink-0 hover:opacity-80 transition-opacity overflow-hidden">
                                         {renderProfilePic("w-full h-full", "💥")}
                                     </div>
@@ -382,7 +379,6 @@
                             <button onClick={() => {setCurrentRoomId(null); setView('chatList');}} className="p-2 -ml-1 text-gray-700 hover:bg-white/20 rounded-full">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                             </button>
-                            {/* 🌟 헤더 프사 (사진 적용) */}
                             <div onClick={() => setShowProfile(true)} className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-xl border border-orange-200 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
                                 {renderProfilePic("w-full h-full", "💥")}
                             </div>
@@ -399,7 +395,6 @@
                             <div key={msg.id} className={`flex flex-col msg-anim ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     {msg.sender !== 'me' && (
-                                        /* 🌟 채팅방 내부 메시지 프사 (사진 적용) */
                                         <div onClick={() => setShowProfile(true)} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 flex items-center justify-center text-lg border border-gray-100 mt-3 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
                                             {renderProfilePic("w-full h-full", "💣")}
                                         </div>
