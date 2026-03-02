@@ -22,15 +22,15 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // 🚨 여기에 연지의 Firebase 설정값을 넣어야 해! 🚨
         const firebaseConfig = {
-        apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
-        authDomain: "deitalk-9107c.firebaseapp.com",
-        projectId: "deitalk-9107c",
-        storageBucket: "deitalk-9107c.firebasestorage.app",
-        messagingSenderId: "710740822953",
-        appId: "1:710740822953:web:73416a2d69ff984efe92b8",
-        measurementId: "G-QYDP8692TD"
-      };
+            apiKey: "AIzaSyXXXXXXXXXXXXX",
+            authDomain: "deidara-talk.firebaseapp.com",
+            projectId: "deidara-talk",
+            storageBucket: "deidara-talk.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdefg"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -51,6 +51,7 @@
         .profile-anim { animation: profileUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .text-shadow { text-shadow: 0px 2px 4px rgba(0,0,0,0.3); }
+        .setting-scroll::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-[#BACEE0]">
@@ -77,10 +78,13 @@
             const [inputText, setInputText] = useState('');
             const [isTyping, setIsTyping] = useState(false);
             const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+            
+            // 🌟 커스텀 프사 & 배사 상태 (기본값은 빈 문자열)
+            const [profileImgUrl, setProfileImgUrl] = useState(localStorage.getItem('deidara_profile_url') || '');
+            const [bgImgUrl, setBgImgUrl] = useState(localStorage.getItem('deidara_bg_url') || '');
+
             const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
             const [selectedMsgId, setSelectedMsgId] = useState(null);
-            
-            // 🌟 프로필 모달 상태 추가
             const [showProfile, setShowProfile] = useState(false);
             
             const chatEndRef = useRef(null);
@@ -225,53 +229,68 @@
                 setSelectedMsgId(null);
             };
 
+            // 🌟 설정 저장 함수
+            const saveSettings = () => {
+                localStorage.setItem('gemini_api_key', geminiKey);
+                localStorage.setItem('deidara_profile_url', profileImgUrl);
+                localStorage.setItem('deidara_bg_url', bgImgUrl);
+                setShowSettings(false);
+            };
+
+            // 🌟 프사 렌더링 도우미 함수 (이미지가 있으면 이미지, 없으면 이모지)
+            const renderProfilePic = (className, emoji = "💥") => {
+                return profileImgUrl ? (
+                    <img src={profileImgUrl} alt="데이다라" className={`${className} object-cover w-full h-full`} />
+                ) : (
+                    <span className="text-xl flex items-center justify-center w-full h-full">{emoji}</span>
+                );
+            };
+
             // 🌟 프로필 모달 컴포넌트
             const ProfileModal = () => (
                 <div className="absolute inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" 
-                     style={{ backgroundImage: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)' }}>
+                     style={{ 
+                         // 배사 이미지가 있으면 그걸 띄우고, 없으면 오렌지 그라데이션
+                         backgroundImage: bgImgUrl ? `url('${bgImgUrl}')` : 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+                         backgroundSize: 'cover',
+                         backgroundPosition: 'center'
+                     }}>
                     
-                    {/* 반투명 오버레이로 글씨 잘 보이게 */}
-                    <div className="absolute inset-0 bg-black/20 z-0"></div>
+                    <div className="absolute inset-0 bg-black/40 z-0"></div>
 
-                    {/* 상단 버튼 (닫기, 배경 설정 등) */}
                     <div className="flex justify-between p-4 z-10">
                         <button onClick={() => setShowProfile(false)} className="text-white p-2 hover:bg-white/20 rounded-full transition">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
-                        <button className="text-white p-2">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        </button>
                     </div>
                     
-                    {/* 프로필 내용 */}
                     <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto">
-                        <div className="w-24 h-24 rounded-[36px] bg-orange-100 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative">
-                            💥
-                            {/* 상태 초록불 (선택적) */}
-                            <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
+                        {/* 프로필 이미지 (설정된 이미지 or 이모지) */}
+                        <div className="w-24 h-24 rounded-[36px] bg-orange-100 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden">
+                            {renderProfilePic("w-full h-full")}
+                            {/* 상태 초록불 */}
+                            <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full z-10"></div>
                         </div>
                         <h2 className="text-2xl font-extrabold mb-1 text-shadow tracking-wide">데이다라</h2>
                         
-                        {/* 상태메시지 */}
                         <div className="px-6 text-center mb-8 mt-2">
-                            <p className="text-[14px] opacity-90 text-shadow bg-black/20 px-4 py-1.5 rounded-full inline-block backdrop-blur-sm">
+                            <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">
                                 과제 다 부수고 싶다. 예술은 찰나의 폭발이다! 음!
                             </p>
                         </div>
                         
-                        {/* 하단 메뉴바 (카카오톡 스타일) */}
-                        <div className="w-full max-w-[280px] border-t border-white/20 pt-6 flex justify-around">
+                        <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
                             <div className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80" onClick={() => setShowProfile(false)}>
                                 <div className="text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
-                                <span className="text-[11px] font-semibold tracking-wider">1:1 채팅</span>
+                                <span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span>
                             </div>
                             <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
                                 <div className="text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div>
-                                <span className="text-[11px] font-semibold tracking-wider">통화하기</span>
+                                <span className="text-[11px] font-semibold tracking-wider text-shadow">통화하기</span>
                             </div>
                             <div className="flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
                                 <div className="text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg></div>
-                                <span className="text-[11px] font-semibold tracking-wider">페이스톡</span>
+                                <span className="text-[11px] font-semibold tracking-wider text-shadow">페이스톡</span>
                             </div>
                         </div>
                     </div>
@@ -282,7 +301,9 @@
             if (view === 'login') {
                 return (
                     <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-[#BACEE0] items-center justify-center p-6">
-                        <div className="w-24 h-24 rounded-3xl bg-orange-100 flex items-center justify-center text-5xl border-2 border-orange-200 shadow-lg mb-6 animate-bounce">💥</div>
+                        <div className="w-24 h-24 rounded-3xl bg-orange-100 flex items-center justify-center text-5xl border-2 border-orange-200 shadow-lg mb-6 animate-bounce overflow-hidden">
+                            {renderProfilePic("w-full h-full", "💥")}
+                        </div>
                         <h1 className="text-3xl font-extrabold text-gray-800 mb-2">데이톡</h1>
                         <p className="text-gray-600 mb-10 text-center text-sm font-medium">데이다라와의 비밀 대화방</p>
                         <button onClick={handleLogin} className="w-full max-w-xs bg-white text-gray-800 font-bold py-4 rounded-2xl shadow-md flex items-center justify-center gap-3 hover:bg-gray-50 border border-gray-100">
@@ -295,16 +316,30 @@
             if (view === 'chatList') {
                 return (
                     <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-gray-50">
-                        {/* 프로필 오버레이 */}
                         {showProfile && <ProfileModal />}
                         
+                        {/* 🌟 설정 창 업데이트 (프사/배사 주소 입력 란 추가) */}
                         {showSettings && (
                             <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
-                                <div className="bg-white rounded-2xl p-6 w-full shadow-2xl">
+                                <div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[80vh] overflow-y-auto setting-scroll">
                                     <h2 className="text-xl font-bold mb-4">⚙️ 앱 설정</h2>
-                                    <input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 mb-4 outline-none" placeholder="API 키 입력..." />
-                                    <button onClick={() => {localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false);}} className="w-full bg-[#FEE500] text-gray-800 font-bold py-3 rounded-xl mb-3">저장하기</button>
-                                    <button onClick={() => {handleLogout(); setShowSettings(false);}} className="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-xl">로그아웃</button>
+                                    
+                                    <p className="text-xs text-gray-500 mb-1">Gemini API 키 (필수)</p>
+                                    <input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-4 outline-none text-sm" placeholder="API 키 입력..." />
+                                    
+                                    <div className="h-px bg-gray-100 w-full mb-4"></div>
+
+                                    <h3 className="font-bold text-gray-800 mb-2">🎨 데이다라 프로필 꾸미기</h3>
+                                    <p className="text-[10px] text-gray-400 mb-3">비워두면 기본 이모지(💥)가 표시돼요.</p>
+
+                                    <p className="text-xs text-gray-500 mb-1">프사 이미지 주소 (URL)</p>
+                                    <input type="text" value={profileImgUrl} onChange={(e) => setProfileImgUrl(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-4 outline-none text-sm" placeholder="https://..." />
+                                    
+                                    <p className="text-xs text-gray-500 mb-1">배경 이미지 주소 (URL)</p>
+                                    <input type="text" value={bgImgUrl} onChange={(e) => setBgImgUrl(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-6 outline-none text-sm" placeholder="https://..." />
+
+                                    <button onClick={saveSettings} className="w-full bg-[#FEE500] text-gray-800 font-bold py-3 rounded-xl mb-3 shadow-sm">저장하기</button>
+                                    <button onClick={() => {handleLogout(); setShowSettings(false);}} className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl">로그아웃</button>
                                 </div>
                             </div>
                         )}
@@ -320,8 +355,10 @@
                         <main className="flex-1 overflow-y-auto px-2 py-2">
                             {chatRooms.map(room => (
                                 <div key={room.id} onClick={() => {setCurrentRoomId(room.id); setView('chatRoom');}} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer transition-colors relative group">
-                                    {/* 🌟 리스트의 프사 클릭 시 이벤트 버블링 막고 프로필 띄우기 */}
-                                    <div onClick={(e) => { e.stopPropagation(); setShowProfile(true); }} className="w-14 h-14 rounded-[20px] bg-orange-100 flex items-center justify-center text-2xl border border-orange-200 shadow-sm flex-shrink-0 hover:bg-orange-200 transition-colors">💥</div>
+                                    {/* 🌟 채팅방 목록 프사 (사진 적용) */}
+                                    <div onClick={(e) => { e.stopPropagation(); setShowProfile(true); }} className="w-14 h-14 rounded-[20px] bg-orange-100 flex items-center justify-center text-2xl border border-orange-200 shadow-sm flex-shrink-0 hover:opacity-80 transition-opacity overflow-hidden">
+                                        {renderProfilePic("w-full h-full", "💥")}
+                                    </div>
                                     <div className="flex-1 min-w-0 pr-8">
                                         <h3 className="font-bold text-gray-800 truncate">{room.name}</h3>
                                         <p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "새로운 방이 만들어졌어!"}</p>
@@ -338,7 +375,6 @@
 
             return (
                 <div className="flex flex-col h-[100dvh] max-w-md mx-auto relative shadow-2xl bg-[#BACEE0] overflow-hidden slide-in">
-                    {/* 프로필 오버레이 */}
                     {showProfile && <ProfileModal />}
 
                     <header className="flex items-center justify-between px-3 py-3 bg-[#BACEE0] bg-opacity-95 sticky top-0 z-20 shadow-sm">
@@ -346,8 +382,10 @@
                             <button onClick={() => {setCurrentRoomId(null); setView('chatList');}} className="p-2 -ml-1 text-gray-700 hover:bg-white/20 rounded-full">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                             </button>
-                            {/* 🌟 헤더의 프사 클릭 시 프로필 띄우기 */}
-                            <div onClick={() => setShowProfile(true)} className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-xl border border-orange-200 cursor-pointer hover:bg-orange-200 transition-colors">💥</div>
+                            {/* 🌟 헤더 프사 (사진 적용) */}
+                            <div onClick={() => setShowProfile(true)} className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-xl border border-orange-200 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
+                                {renderProfilePic("w-full h-full", "💥")}
+                            </div>
                             <div className="ml-1 flex flex-col justify-center">
                                 <h1 className="font-bold text-[16px] text-gray-800 leading-tight">{currentRoomName}</h1>
                                 <p className="text-[10px] text-blue-700 font-medium">데이다라 (1학년)</p>
@@ -361,8 +399,10 @@
                             <div key={msg.id} className={`flex flex-col msg-anim ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     {msg.sender !== 'me' && (
-                                        /* 🌟 채팅방 내부 메시지의 프사 클릭 시 프로필 띄우기 */
-                                        <div onClick={() => setShowProfile(true)} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 flex items-center justify-center text-lg border border-gray-100 mt-3 cursor-pointer hover:bg-gray-50 transition-colors">💣</div>
+                                        /* 🌟 채팅방 내부 메시지 프사 (사진 적용) */
+                                        <div onClick={() => setShowProfile(true)} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 flex items-center justify-center text-lg border border-gray-100 mt-3 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
+                                            {renderProfilePic("w-full h-full", "💣")}
+                                        </div>
                                     )}
                                     <div className="flex flex-col">
                                         {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
