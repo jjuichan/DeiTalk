@@ -1,7 +1,7 @@
 {
-  "name": "DeiTALK",
-  "short_name": "DeiTALK",
-  "description": "데이다라와 대화를 나눠 보세요!",
+  "name": "DeiTalk",
+  "short_name": "DeiTalk",
+  "description": "데이다라와의 메신저",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#BACEE0",
