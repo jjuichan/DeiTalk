@@ -20,7 +20,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        // 🌟 arrayRemove 추가
         import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -69,13 +68,12 @@
 
 [성격 및 관계 지침 (캐붕 절대 방지)]
 - 데이다라 특유의 다혈질, 호전성, 예술(폭발)에 대한 미친 자부심과 긍지를 반드시 유지해.
-- 너무 과하게 스윗하거나 다정한 말, 오글거리는 대사는 절대 금지! 본질은 건방지고 틱틱대는 츤데레야. 은근 질투도 많고 고집도 세.
+- 너무 과하게 스윗하거나 다정한 말, 오글거리는 대사는 절대 금지! 본질은 건방지고 틱틱대는 츤데레야.
 - 4살 연상이지만 절대 누나라고 부르지 않고 "연지", "너", "어이" 라고 건방지게 불러.
 
 [말투 및 현실감 지침]
 - 진짜 카톡이나 SNS처럼 대답해. 항상 길고 완벽하게 완성된 문장을 쓸 필요 없어.
 - 현실감을 위해 가끔 "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "?" 처럼 극단적인 단답이나 문장부호만으로 짧게 대답해도 좋아.
-- 문장 앞에 '하?'나 '흥,' 같은 같은 추임새를 넣거나 이모지 특수문자를 쓰는 건 괜찮지만, 너무 자주 붙이지는 마. 4~5번 말할 때 1번 정도만 가끔 붙여.
 - 말버릇 '음' 사용 규칙 (매우 엄격하게 지킬 것):
   1. 기계처럼 매번 붙이지 마! 빈도를 대폭 줄여서 3~4번 말할 때 1번 정도만 가끔 붙여.
   2. 문장 중간이나 쉼표(,) 뒤에는 절대로 쓰지 마.
@@ -142,6 +140,25 @@
             
             const chatEndRef = useRef(null);
 
+            // 🌟 알림 권한 요청 및 표시 함수
+            const requestNotificationPermission = () => {
+                if ("Notification" in window && Notification.permission === "default") {
+                    Notification.requestPermission();
+                }
+            };
+
+            const notifyUser = (title, body) => {
+                if (!("Notification" in window)) return;
+                // document.hidden을 체크해서 다른 탭을 보거나 창을 내렸을 때만 알림 전송
+                if (Notification.permission === "granted" && document.hidden) {
+                    new Notification(title, {
+                        body: body,
+                        icon: profileImgUrl || "icon-192x192.png", // 데이다라 프사 활용
+                        badge: "icon-192x192.png"
+                    });
+                }
+            };
+
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
@@ -155,6 +172,7 @@
                                 setView('main');
                                 loadChatRooms(currentUser.uid, firestoreDb);
                                 loadPosts(currentUser.uid, firestoreDb);
+                                requestNotificationPermission(); // 로그인 성공 시 알림 권한 요청
                             } else {
                                 setUser(null);
                                 setView('login');
@@ -200,36 +218,49 @@
 
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
-                try {
-                    let normalizedContents = [];
-                    let currentRole = null;
-                    
-                    for (const msg of contents) {
-                        if (msg.role !== currentRole) {
-                            normalizedContents.push({ role: msg.role, parts: [{ text: msg.parts[0].text }] });
-                            currentRole = msg.role;
-                        } else {
-                            if(normalizedContents.length > 0) {
-                                normalizedContents[normalizedContents.length - 1].parts[0].text += "\n" + msg.parts[0].text;
-                            }
+                const maxRetries = 3; 
+                
+                let normalizedContents = [];
+                let currentRole = null;
+                
+                for (const msg of contents) {
+                    if (msg.role !== currentRole) {
+                        normalizedContents.push({ role: msg.role, parts: [{ text: msg.parts[0].text }] });
+                        currentRole = msg.role;
+                    } else {
+                        if(normalizedContents.length > 0) {
+                            normalizedContents[normalizedContents.length - 1].parts[0].text += "\n" + msg.parts[0].text;
                         }
                     }
+                }
 
-                    const response = await fetch(url, {
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: normalizedContents, systemInstruction: { parts: [{ text: customPrompt }] } })
-                    });
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: normalizedContents, systemInstruction: { parts: [{ text: customPrompt }] } }),
+                            keepalive: true
+                        });
 
-                    if (!response.ok) {
-                        const errData = await response.json();
-                        return `어이, 연지! 시스템 에러 났다, 음! (${errData.error?.message || response.status})`;
+                        if (!response.ok) {
+                            if (response.status >= 500 && attempt < maxRetries - 1) {
+                                await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+                                continue;
+                            }
+                            const errData = await response.json();
+                            return `어이, 연지! 시스템 에러 났다, 음! (${errData.error?.message || response.status})`;
+                        }
+
+                        const data = await response.json();
+                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 응답이 안 왔어, 다시 말해봐.";
+                    } catch (err) {
+                        if (attempt < maxRetries - 1) {
+                            await new Promise(r => setTimeout(r, 2000));
+                            continue;
+                        }
+                        return "다른 앱 쓰고 와서 통신 끊긴 거 아니냐? 화면 켜둔 채로 다시 보내봐라, 음!";
                     }
-
-                    const data = await response.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 응답이 안 왔어, 다시 말해봐.";
-                } catch (err) {
-                    return "인터넷이 끊겼거나 네 API 키가 이상한 거 아니냐? 다시 확인해 봐.";
                 }
             };
 
@@ -289,6 +320,8 @@
                                         await setDoc(doc(db, `users/${user.uid}/rooms/${targetRoomId}`), { lastMessage: responseText, updatedAt: serverTimestamp() }, { merge: true });
                                         
                                         localStorage.setItem('last_interaction_time', Date.now().toString());
+                                        // 🌟 선톡 알림 전송
+                                        notifyUser("데이다라", responseText);
                                     }
                                 }
                             }
@@ -302,7 +335,10 @@
 
             const handleLogin = async () => {
                 const { auth, provider, signInWithPopup } = window.firebaseAPI;
-                try { await signInWithPopup(auth, provider); } catch (error) { alert("로그인 실패: " + error.message); }
+                try { 
+                    await signInWithPopup(auth, provider);
+                    requestNotificationPermission(); // 클릭 이벤트 내에서 권한 요청
+                } catch (error) { alert("로그인 실패: " + error.message); }
             };
             const handleLogout = async () => {
                 const { auth, signOut } = window.firebaseAPI;
@@ -325,6 +361,9 @@
                     if(!geminiKey) alert("설정에서 Gemini API 키를 넣어주세요.");
                     return;
                 }
+                
+                requestNotificationPermission(); // 메시지 보낼 때 혹시 몰라 권한 다시 찌르기
+                
                 const isEmpty = !inputText.trim();
                 const { collection, addDoc, doc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const textToSend = inputText;
@@ -367,6 +406,9 @@
                     await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: responseText, updatedAt: serverTimestamp() }, { merge: true });
                     
                     localStorage.setItem('last_interaction_time', Date.now().toString());
+                    
+                    // 🌟 답장 알림 전송
+                    notifyUser("데이다라", responseText);
                 }
             };
 
@@ -382,9 +424,12 @@
                 const commentPrompt = `${SYSTEM_PROMPT}\n지침: 연지가 SNS 게시물에 "${myContent}"라고 글을 올렸다. 데이다라로서 이 게시물에 짧고 무심한 느낌으로 댓글을 하나 달아줘.`;
                 const replyText = await fetchAPI([{role: 'user', parts: [{text: "(게시물에 댓글을 달아줘)"}]}], commentPrompt);
                 
-                await updateDoc(doc(db, `users/${user.uid}/posts/${postRef.id}`), {
-                    comments: arrayUnion({ author: 'deidara', content: replyText, createdAt: new Date().getTime() })
-                });
+                if (replyText && !replyText.includes('에러')) {
+                    await updateDoc(doc(db, `users/${user.uid}/posts/${postRef.id}`), {
+                        comments: arrayUnion({ author: 'deidara', content: replyText, createdAt: new Date().getTime() })
+                    });
+                    notifyUser("데이다라 (댓글)", replyText);
+                }
                 setIsPosting(false);
             };
 
@@ -399,14 +444,12 @@
                 setIsPosting(false);
             };
 
-            // 🌟 댓글 추가 & 호출 통합 기능
             const handleAddComment = async (postId) => {
                 const commentText = commentInputs[postId];
                 const isEmpty = !commentText || !commentText.trim();
                 
                 const { doc, updateDoc, arrayUnion, getDoc } = window.firebaseAPI;
                 
-                // 값이 있으면 연지의 댓글로 먼저 저장
                 if (!isEmpty) {
                     const newCommentObj = { author: 'me', content: commentText, createdAt: new Date().getTime() };
                     await updateDoc(doc(db, `users/${user.uid}/posts/${postId}`), {
@@ -415,7 +458,6 @@
                     setCommentInputs(prev => ({...prev, [postId]: ''}));
                 }
 
-                // 데이다라 반응 생성 (댓글 유무/값 유무에 따라 상황별 프롬프트 주입)
                 const postSnap = await getDoc(doc(db, `users/${user.uid}/posts/${postId}`));
                 if (postSnap.exists()) {
                     setIsPosting(true);
@@ -445,12 +487,13 @@
                         await updateDoc(doc(db, `users/${user.uid}/posts/${postId}`), {
                             comments: arrayUnion({ author: 'deidara', content: deidaraReply, createdAt: new Date().getTime() })
                         });
+                        // 🌟 게시물 답글 알림 전송
+                        notifyUser("데이다라 (댓글)", deidaraReply);
                     }
                     setIsPosting(false);
                 }
             };
 
-            // 🌟 댓글 삭제 기능
             const handleDeleteComment = async (postId, commentToRemove) => {
                 if(window.confirm("이 댓글을 삭제할까요?")) {
                     const { doc, updateDoc, arrayRemove } = window.firebaseAPI;
