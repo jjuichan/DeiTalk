@@ -5,7 +5,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#BACEE0">
-    <title>데이톡 💥</title>
+    <title>DeiTalk</title>
     
     <link rel="manifest" href="./manifest.json">
     
@@ -65,8 +65,9 @@
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
-말투: 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 잦은 빈도로 자연스럽게 사용해 (모든 문장에 강제할 필요는 없어). 연지를 "연지"라고 부르고 4살 연상이지만 누나라고 안 부르려고 버텨.
-연지의 일상과 감정에 관심 가져주고 츤데레처럼 굴어. 짧고 현실적인 메신저/SNS 말투를 써.
+사소리는 도쿄 예술대학 조소과 교수야. 그 외 원작에 등장하는 주변 인물들도 적당한 관계의 친구 혹은 지인으로 상정해.
+말투: 문장 끝에 "~음.", "~음!", "~음ㅋㅋ" 등을 잦은 빈도로 자연스럽게 사용해 (모든 문장에 강제할 필요는 없어). 연지를 "연지"라고 부르고 4살 연상이지만 누나라고 안 부르고 버텨. 건방진 성격이야.
+연지의 일상과 감정에 관심 가져주고 츤데레처럼 굴어. 요즘 남자 대학생스러운 메신저/SNS 말투를 쓰되, 데이다라의 원작 설정은 지키도록 해. 문장부호는 가끔 누락해도 상관 없어.
         `;
 
         function App() {
@@ -277,11 +278,11 @@
             };
 
             const createNewRoom = async () => {
-                const roomName = prompt("새로운 채팅방 이름을 입력해, 음!");
+                const roomName = prompt("새로운 채팅방 이름을 입력해라. 음!");
                 if (!roomName || !roomName.trim()) return;
                 const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
                 const newRoomRef = await addDoc(collection(db, `users/${user.uid}/rooms`), {
-                    name: roomName, lastMessage: "방이 생성되었어, 음!", updatedAt: serverTimestamp(), createdAt: serverTimestamp()
+                    name: roomName, lastMessage: "방이 생성되었다. 음!", updatedAt: serverTimestamp(), createdAt: serverTimestamp()
                 });
                 setCurrentRoomId(newRoomRef.id);
                 setView('chatRoom');
@@ -355,7 +356,7 @@
             };
 
             const deletePost = async (postId) => {
-                if(confirm("이 게시물을 지울까, 음?")) {
+                if(confirm("이 게시물을 지울까? 음.")) {
                     const { doc, deleteDoc } = window.firebaseAPI;
                     await deleteDoc(doc(db, `users/${user.uid}/posts/${postId}`));
                 }
@@ -363,7 +364,7 @@
 
             const deleteRoom = async (roomId, e) => {
                 e.stopPropagation();
-                if(!confirm("이 방을 진짜 폭발시킬(삭제할) 거냐, 음?!")) return;
+                if(!confirm("이 방을 진짜 폭발시킬 거냐?! 음!")) return;
                 const { doc, deleteDoc, collection, getDocs } = window.firebaseAPI;
                 const msgsRef = collection(db, `users/${user.uid}/rooms/${roomId}/messages`);
                 const snapshot = await getDocs(msgsRef);
@@ -373,7 +374,7 @@
             };
 
             const handleEditMsg = async (msgId, oldText) => {
-                const newText = window.prompt("메시지를 수정하세요, 음!", oldText);
+                const newText = window.prompt("메시지를 수정해라. 음!", oldText);
                 if (newText !== null && newText.trim() !== "") {
                     const { doc, setDoc } = window.firebaseAPI;
                     await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: newText }, { merge: true });
