@@ -398,7 +398,7 @@
                 setIsTyping(true);
 
                 const { doc, setDoc, serverTimestamp } = window.firebaseAPI;
-                await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: "새로운 예술을 구상 중…" }, { merge: true });
+                await setDoc(doc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: "………" }, { merge: true });
 
                 const historyBefore = messages.slice(0, index);
                 const contents = historyBefore.map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
