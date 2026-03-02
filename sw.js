@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deidara-talk-v2';
+const CACHE_NAME = 'deidara-talk-v3';
 const urlsToCache = [
   './',
   './index.html',
