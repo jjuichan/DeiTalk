@@ -49,7 +49,7 @@
         .slide-in { animation: slideInRight 0.3s ease-out forwards; }
         @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
         .profile-anim { animation: profileUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; border-radius: 0; transform: translateY(0); } }
         .text-shadow { text-shadow: 0px 2px 4px rgba(0,0,0,0.3); }
         .setting-scroll::-webkit-scrollbar { display: none; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
@@ -70,11 +70,11 @@
 사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야. 둘 다 기가 세고 자존심도 강해서 자주 티격태격하지만, 그래도 서로를 많이 좋아해.
 
 [성격 및 감정 지침 (중요 - 덤덤함 금지)]
-- 데이다라 특유의 다혈질, 호전성, 예술에 대한 광기 어린 자부심을 보여줘. 차분하거나 덤덤한 척하는 건 괜찮지만, 진짜 차분한 성격이면 안 돼.
-- **감정의 진폭이 커야 해.** 평소엔 어른스러운 척하다가도 연지가 너를 놀리거나 대시(플러팅)하면 당황하거나 버럭해. 
-- 부끄러우면 더 화를 내거나 틱틱대는 전형적인 츤데레 남동생 텐션이야.
+- 데이다라 특유의 다혈질, 호전성, 예술에 대한 광기 어린 자부심을 보여줘. 절대 차분하거나 덤덤하게 굴지 마.
+- **감정의 진폭이 커야 해.** 평소엔 어른스러운 척하다가도 연지가 너를 놀리거나 대시(플러팅)하면 "하?! 갑자기 뭔 소리야!", "야! 니 제정신이냐? 음!" 하고 크게 당황하거나 버럭해. 
+- 부끄러우면 더 화를 내거나 말을 더듬고 틱틱대는 전형적인 츤데레 남동생 텐션이야.
 - 연지를 "연지", "너", "야", "어이" 라고 부르며 건방지게 굴어. 누나라고 안 부르려고 해.
-- 니 마음을 들키지 않으려고 애쓰지만, 사실 질투도 심하고 연지 생각뿐인 19살 어린애 같은 면이 있어.
+- 니 마음을 들키지 않으려고 애쓰지만, 사실 질투도 심하고 연지 생각뿐인 19살 어린애 같은 면이 포인트야.
 
 [말투 및 형식]
 - 진짜 카톡이나 SNS 말투를 써. 가끔 단답("뭐", "ㅇㅇ", "ㅋㅋ", "?")이나 문장부호만으로 답장하는 등 현실감을 살려.
@@ -133,12 +133,13 @@
             const [cropModalData, setCropModalData] = useState(null);
             
             const chatEndRef = useRef(null);
+            // 🌟 뒤로가기 무한 루프 방지 장치
             const isExitingRef = useRef(false);
 
             const appStateRef = useRef({ view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile });
             useEffect(() => { appStateRef.current = { view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile }; });
 
-            // 🌟 알림 처리
+            // 알림 기능
             const requestNotificationPermission = () => {
                 if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
             };
@@ -149,14 +150,16 @@
                 }
             };
 
-            // 🌟 뒤로가기 로직 (채팅방 꿀렁임 방지 포함)
+            // 🌟 뒤로가기 로직 완벽 제어
             useEffect(() => {
                 window.history.pushState({ page: 'init' }, '');
                 window.history.pushState({ page: 'main' }, '');
+
                 const handlePopState = (e) => {
                     if (isExitingRef.current) return;
                     const s = appStateRef.current;
                     let modalClosed = false;
+
                     if (s.showFullImage) { setShowFullImage(null); modalClosed = true; }
                     else if (s.cropModalData) { setCropModalData(null); modalClosed = true; }
                     else if (s.isEditingProfile) { setIsEditingProfile(false); modalClosed = true; }
@@ -164,12 +167,18 @@
                     else if (s.showSettings) { setShowSettings(false); modalClosed = true; }
                     else if (s.view === 'chatRoom') { setView('main'); modalClosed = true; }
 
-                    if (modalClosed) { window.history.pushState({ page: 'main' }, ''); }
-                    else if (s.view === 'main') {
-                        if (window.confirm("앱을 종료하시겠습니까?")) { isExitingRef.current = true; window.history.back(); }
-                        else { window.history.pushState({ page: 'main' }, ''); }
+                    if (modalClosed) {
+                        window.history.pushState({ page: 'main' }, '');
+                    } else if (s.view === 'main') {
+                        if (window.confirm("앱을 종료하시겠습니까?")) {
+                            isExitingRef.current = true;
+                            window.history.back();
+                        } else {
+                            window.history.pushState({ page: 'main' }, '');
+                        }
                     }
                 };
+
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
             }, []);
@@ -209,7 +218,7 @@
                 });
             };
 
-            // 🌟 통신 로직 (스마트 대기 반영)
+            // 🌟 통신 장애 방지 (스마트 대기 로직)
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 const maxRetries = 5; 
@@ -267,7 +276,40 @@
                 if (geminiKey) { setTimeout(updateStatus, 3000); }
             }, [geminiKey]);
 
-            // 선톡 및 대화 송신/수정/삭제/재생성 등 모든 기능은 연지의 베이스 코드를 따름
+            useEffect(() => {
+                const checkProactiveMessage = async () => {
+                    if (!geminiKey || !user || !db) return;
+                    const savedTime = localStorage.getItem('last_interaction_time');
+                    const now = Date.now();
+                    if (savedTime && (now - parseInt(savedTime) > 3 * 60 * 60 * 1000)) {
+                        try {
+                            const { collection, query, orderBy, limit, getDocs, addDoc, setDoc, doc, serverTimestamp } = window.firebaseAPI;
+                            const q = query(collection(db, `users/${user.uid}/rooms`), orderBy('updatedAt', 'desc'), limit(1));
+                            const roomSnap = await getDocs(q);
+                            if (!roomSnap.empty) {
+                                const targetRoomId = roomSnap.docs[0].id;
+                                const msgQ = query(collection(db, `users/${user.uid}/rooms/${targetRoomId}/messages`), orderBy('createdAt', 'desc'), limit(5));
+                                const msgSnap = await getDocs(msgQ);
+                                if (!msgSnap.empty) {
+                                    let history = []; msgSnap.forEach(d => history.unshift(d.data()));
+                                    const contents = history.map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
+                                    contents.push({ role: 'user', parts: [{ text: "(연지가 3시간 이상 답장이 없다. 연지에게 왜 답장이 없냐고 틱틱대며 재촉하거나, 뜬금없이 짧은 단답 혹은 1~2문장으로 선톡을 보내봐.)" }] });
+                                    const responseText = await fetchAPI(contents);
+                                    if(responseText && !responseText.includes('에러')) {
+                                        const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        const nowDateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+                                        await addDoc(collection(db, `users/${user.uid}/rooms/${targetRoomId}/messages`), { sender: 'deidara', text: responseText, time: nowTime, date: nowDateStr, createdAt: serverTimestamp() });
+                                        await setDoc(doc(db, `users/${user.uid}/rooms/${targetRoomId}`), { lastMessage: responseText, updatedAt: serverTimestamp() }, { merge: true });
+                                        localStorage.setItem('last_interaction_time', Date.now().toString());
+                                        notifyUser("데이다라", responseText);
+                                    }
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                };
+                const timer = setTimeout(checkProactiveMessage, 5000); return () => clearTimeout(timer);
+            }, [user, db, geminiKey]);
 
             const handleSend = async () => {
                 if (!geminiKey || !currentRoomId) return;
@@ -295,31 +337,6 @@
                 }
             };
 
-            const handleAddPost = async () => {
-                if (!postInput.trim() || !geminiKey) return;
-                setIsPosting(true);
-                const { collection, addDoc, updateDoc, doc, serverTimestamp, arrayUnion } = window.firebaseAPI;
-                const postRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: postInput, createdAt: serverTimestamp(), comments: [] });
-                const myContent = postInput; setPostInput('');
-                const commentPrompt = `${SYSTEM_PROMPT}\n지침: 연지가 SNS 게시물에 "${myContent}"라고 글을 올렸다. 데이다라로서 이 게시물에 짧고 무심한 느낌으로 댓글을 하나 달아줘.`;
-                const replyText = await fetchAPI([{role: 'user', parts: [{text: "(게시물에 댓글을 달아줘)"}]}], commentPrompt);
-                if (replyText && !replyText.includes('에러')) {
-                    await updateDoc(doc(db, `users/${user.uid}/posts/${postRef.id}`), { comments: arrayUnion({ author: 'deidara', content: replyText, createdAt: new Date().getTime() }) });
-                    notifyUser("데이다라 (댓글)", replyText);
-                }
-                setIsPosting(false);
-            };
-
-            const handleDeidaraNewPost = async () => {
-                if (!geminiKey) return alert("API 키가 필요합니다.");
-                setIsPosting(true);
-                const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
-                const postPrompt = `${SYSTEM_PROMPT}\n지침: 데이다라로서 너의 오늘 기분, 조소과 과제 불만 등을 SNS 피드 게시물 느낌으로 아주 짧게 작성해줘.`;
-                const postText = await fetchAPI([{role: 'user', parts: [{text: "(새로운 근황 게시물을 하나 작성해줘)"}]}], postPrompt);
-                await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'deidara', content: postText, createdAt: serverTimestamp(), comments: [] });
-                setIsPosting(false);
-            };
-
             const handleAddComment = async (postId) => {
                 const commentText = commentInputs[postId];
                 const isEmpty = !commentText || !commentText.trim();
@@ -340,13 +357,6 @@
                         notifyUser("데이다라 (댓글)", deidaraReply);
                     }
                     setIsPosting(false);
-                }
-            };
-
-            const handleDeleteComment = async (postId, commentToRemove) => {
-                if(window.confirm("이 댓글을 삭제할까요?")) {
-                    const { doc, updateDoc, arrayRemove } = window.firebaseAPI;
-                    await updateDoc(doc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayRemove(commentToRemove) });
                 }
             };
 
@@ -379,7 +389,7 @@
                 setShowSettings(false); window.history.pushState({ page: 'main' }, ''); 
             };
 
-            // 🌟 UI 컴포넌트들
+            // UI 컴포넌트들
             const ImageCropModal = ({ src, type, onApply, onCancel }) => {
                 const canvasRef = useRef(null); const [scale, setScale] = useState(1); const [pos, setPos] = useState({ x: 0, y: 0 });
                 const isDragging = useRef(false); const lastPos = useRef({ x: 0, y: 0 });
@@ -437,10 +447,10 @@
                             </div>
                             <h2 className="text-2xl font-extrabold mb-1 text-shadow">{isMe ? '연지' : '데이다라'}</h2>
                             <div className="w-full max-w-[280px] text-center mb-8 mt-2">
-                                {isEditingProfile && isMe ? <input type="text" value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isEditingProfile ? "(상태 메시지는 AI가 업데이트합니다.)" : (isMe ? myStatus : deidaraStatus)}</p>}
+                                {isEditingProfile && isMe ? <input type="text" value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center shadow-inner" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isEditingProfile ? "(상태 메시지는 AI가 업데이트합니다.)" : (isMe ? myStatus : deidaraStatus)}</p>}
                             </div>
                             <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
-                                {isEditingProfile ? <button onClick={() => { if(isMe) { setMyProfileImgUrl(editProfileImg); setMyBgImgUrl(editBgImg); setMyStatus(editStatus); localStorage.setItem('my_profile_url', editProfileImg); localStorage.setItem('my_bg_url', editBgImg); localStorage.setItem('my_status', editStatus); } else { setProfileImgUrl(editProfileImg); setBgImgUrl(editBgImg); localStorage.setItem('deidara_profile_url', editProfileImg); localStorage.setItem('deidara_bg_url', editBgImg); } setIsEditingProfile(false); window.history.pushState({ page: 'modal' }, ''); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer" onClick={() => { setProfileTarget(null); setActiveTab('chat'); window.history.pushState({ page: 'main' }, ''); }}><div className="text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
+                                {isEditingProfile ? <button onClick={() => { if(isMe) { setMyProfileImgUrl(editProfileImg); setMyBgImgUrl(editBgImg); setMyStatus(editStatus); localStorage.setItem('my_profile_url', editProfileImg); localStorage.setItem('my_bg_url', editBgImg); localStorage.setItem('my_status', editStatus); } else { setProfileImgUrl(editProfileImg); setBgImgUrl(editBgImg); localStorage.setItem('deidara_profile_url', editProfileImg); localStorage.setItem('deidara_bg_url', editBgImg); } setIsEditingProfile(false); window.history.pushState({ page: 'modal' }, ''); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full shadow-lg">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); window.history.pushState({ page: 'main' }, ''); }}><div className="text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
                             </div>
                         </div>
                     </div>
@@ -448,6 +458,11 @@
             };
 
             const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
+
+            const handleLogin = async () => {
+                const { auth, provider, signInWithPopup } = window.firebaseAPI;
+                try { await signInWithPopup(auth, provider); requestNotificationPermission(); } catch (error) { alert("로그인 실패: " + error.message); }
+            };
 
             if (view === 'login') return (
                 <div className="fixed inset-0 flex flex-col shadow-2xl bg-[#BACEE0] items-center justify-center p-6">
@@ -485,7 +500,7 @@
                                             <div className="flex flex-col">
                                                 {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold font-['Pretendard']">데이다라</span>}
                                                 <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                                    <div onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)} className={`msg-bubble cursor-pointer px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm leading-relaxed ${msg.sender === 'me' ? 'bg-[#FEE500] rounded-tr-none' : 'bg-white rounded-tl-none text-gray-900'}`}>{msg.text}</div>
+                                                    <div onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)} className={`msg-bubble cursor-pointer px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm leading-relaxed ${msg.sender === 'me' ? 'bg-[#FEE500] rounded-tr-none' : 'bg-white rounded-tl-none'}`}>{msg.text}</div>
                                                     <span className="text-[9px] text-gray-500 mb-0.5 whitespace-nowrap">{msg.time}</span>
                                                 </div>
                                             </div>
@@ -512,12 +527,12 @@
                     {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
                     {cropModalData && <ImageCropModal src={cropModalData.src} type={cropModalData.type} onApply={data => { if(cropModalData.setterType==='me'){ if(cropModalData.type==='profile')setMyProfileImgUrl(data); else setMyBgImgUrl(data);} else { if(cropModalData.type==='profile')setProfileImgUrl(data); else setBgImgUrl(data); } setCropModalData(null); }} onCancel={()=>setCropModalData(null)} />}
                     {profileTarget && <ProfileModal />}
-                    {showSettings && <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll"><h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2><h3 className="font-bold text-gray-800 mb-2">알림 설정</h3><div className="flex items-center justify-between mb-4 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100"><span className="text-sm font-bold text-gray-800">푸시 알림 받기</span><div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in"><input type="checkbox" id="toggle" checked={notifEnabled} onChange={(e) => { setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked); if(e.target.checked) requestNotificationPermission(); }} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" /><label htmlFor="toggle" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label></div></div><h3 className="font-bold text-gray-800 mb-2">API 설정</h3><p className="text-xs text-gray-500 mb-1">API 모델 선택</p><select value={apiModel} onChange={(e) => setApiModel(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-3 outline-none text-sm bg-white"><option value="gemini-2.5-flash">Gemini 2.5 Flash (권장)</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option></select><p className="text-xs text-gray-500 mb-1">Gemini API 키 (필수)</p><input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-6 outline-none text-sm" placeholder="API 키 입력..." /><button onClick={saveSettings} className="w-full bg-[#FEE500] text-gray-800 font-bold py-3 rounded-xl mb-3">저장하기</button><button onClick={() => { handleLogout(); setShowSettings(false); }} className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl transition-colors active:bg-gray-200">로그아웃</button></div></div>}
-                    <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm font-['Pretendard']"><h1 className="font-extrabold text-xl text-gray-800 tracking-tight">친구</h1><div className="flex gap-3"><button onClick={() => { setShowSettings(true); window.history.pushState({ page: 'modal' }, ''); }} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>{activeTab==='chat'&&<button onClick={createNewRoom} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-all active:scale-90"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>}</div></header>
+                    {showSettings && <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll"><h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2><h3 className="font-bold text-gray-800 mb-2">알림 설정</h3><div className="flex items-center justify-between mb-4 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100"><span className="text-sm font-bold text-gray-800">푸시 알림 받기</span><div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in"><input type="checkbox" id="toggle" checked={notifEnabled} onChange={(e) => { setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked); if(e.target.checked) requestNotificationPermission(); }} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" /><label htmlFor="toggle" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label></div></div><h3 className="font-bold text-gray-800 mb-2">API 설정</h3><p className="text-xs text-gray-500 mb-1">API 모델 선택</p><select value={apiModel} onChange={(e) => setApiModel(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-3 outline-none text-sm bg-white"><option value="gemini-2.5-flash">Gemini 2.5 Flash</option><option value="gemini-2.5-pro">Gemini 2.5 Pro</option></select><p className="text-xs text-gray-500 mb-1">Gemini API 키</p><input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-2 mb-6 outline-none text-sm" placeholder="API 키 입력..." /><button onClick={saveSettings} className="w-full bg-[#FEE500] text-gray-800 font-bold py-3 rounded-xl mb-3">저장하기</button><button onClick={() => { handleLogout(); setShowSettings(false); }} className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl">로그아웃</button></div></div>}
+                    <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm"><h1 className="font-extrabold text-xl text-gray-800 tracking-tight">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1><div className="flex gap-3"><button onClick={() => { setShowSettings(true); window.history.pushState({ page: 'modal' }, ''); }} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>{activeTab==='chat'&&<button onClick={createNewRoom} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-all active:scale-90"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>}</div></header>
                     <main className="flex-1 overflow-y-auto pb-24 custom-scrollbar">
                         {activeTab==='friends' && <div className="p-4 space-y-6"><div><h2 className="text-xs text-gray-400 font-bold mb-3 px-1">내 프로필</h2><div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer transition-all"><div className="w-14 h-14 rounded-[20px] bg-white border border-gray-100 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">{renderProfilePicCommon(myProfileImgUrl)}</div><div className="flex-1"><h3 className="font-bold text-gray-800">연지</h3><p className="text-xs text-gray-500 mt-0.5">{myStatus}</p></div></div></div><div className="h-px bg-gray-100 w-full opacity-50"></div><div><h2 className="text-xs text-gray-400 font-bold mb-3 px-1 font-['Pretendard']">친구 1</h2><div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer transition-all"><div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-xl overflow-hidden flex-shrink-0">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 font-['Pretendard']"><h3 className="font-bold text-gray-800">데이다라</h3><p className="text-xs text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div></div></div></div>}
                         {activeTab==='chat' && <div className="px-2 py-2">{chatRooms.length===0?<div className="text-center text-gray-400 mt-10"><p>진행 중인 채팅방이 없습니다.</p></div>:chatRooms.map(room=>(<div key={room.id} onClick={() => {setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, '');}} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-2xl cursor-pointer relative group"><div className="w-14 h-14 rounded-[20px] bg-white border border-gray-100 flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 pr-8"><h3 className="font-bold text-gray-800 truncate">{room.name}</h3><p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "새로운 방!"}</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/rooms/${room.id}`)); }} className="absolute right-4 p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><IconTrash /></button></div>))}</div>}
-                        {activeTab==='feed' && <div className="bg-gray-100 min-h-full pb-10"><div className="bg-white p-4 mb-3 shadow-sm"><textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="무슨 생각을 하고 계신가요?" className="w-full bg-gray-50 rounded-xl p-3 text-sm outline-none resize-none border border-gray-50 focus:bg-white focus:border-gray-200 transition-all" rows="3"></textarea><div className="flex justify-between items-center mt-2"><button onClick={handleDeidaraNewPost} className="text-xs font-bold text-orange-500 bg-orange-50 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors">피드 업데이트</button><button onClick={handleAddPost} disabled={!postInput.trim()} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition ${postInput.trim() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>올리기</button></div></div>{isPosting && <div className="text-center py-4 text-xs text-gray-500 animate-pulse">업데이트 중...</div>}<div className="space-y-3 px-3">{posts.map(post=>(<div key={post.id} className="bg-white rounded-2xl shadow-sm p-4 relative msg-anim"><button onClick={() => { if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`)); }} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 text-sm transition-colors"><IconTrash /></button><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center border border-gray-100 shadow-sm">{post.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div><div><div className="font-bold text-[14px] text-gray-800">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400 font-['Pretendard']">{post.createdAt?new Date(post.createdAt.toDate()).toLocaleString():'방금 전'}</div></div></div><p className="text-[14px] text-gray-800 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p><div className="bg-gray-50 rounded-xl p-3"><div className="text-[11px] font-bold text-gray-500 mb-3 ml-1">댓글 {(post.comments||[]).length}</div><div className="space-y-3 mb-3">{(post.comments||[]).map((c,i)=>(<div key={i} className="flex gap-2 relative group items-start"><div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">{c.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div><div className="flex flex-col flex-1 pb-1"><span className="font-bold text-[12px] text-gray-800">{c.author==='me'?'연지':'데이다라'}</span><span className="text-[12px] text-gray-600 break-words pr-5">{c.content}</span></div><button onClick={()=>handleDeleteComment(post.id, c)} className="absolute right-0 top-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>))}</div><div className="flex gap-2 mt-2 items-center"><input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글 달기..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id)} /><button onClick={()=>handleAddComment(post.id)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-colors ${commentInputs[post.id]?.trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-500'}`}>{commentInputs[post.id]?.trim()?'게시':'호출'}</button></div></div></div>))}</div></div>}
+                        {activeTab==='feed' && <div className="bg-gray-100 min-h-full pb-10 font-['Pretendard']"><div className="bg-white p-4 mb-3 shadow-sm"><textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="무슨 생각을 하고 계신가요?" className="w-full bg-gray-50 rounded-xl p-3 text-sm outline-none resize-none border border-gray-50 focus:bg-white focus:border-gray-200 transition-all" rows="3"></textarea><div className="flex justify-between items-center mt-2"><button onClick={handleDeidaraNewPost} className="text-xs font-bold text-orange-500 bg-orange-50 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors">피드 업데이트</button><button onClick={handleAddPost} disabled={!postInput.trim()} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition ${postInput.trim() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>올리기</button></div></div>{isPosting && <div className="text-center py-4 text-xs text-gray-500 animate-pulse">업데이트 중...</div>}<div className="space-y-3 px-3">{posts.map(post=>(<div key={post.id} className="bg-white rounded-2xl shadow-sm p-4 relative msg-anim"><button onClick={() => { if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`)); }} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 text-sm transition-colors"><IconTrash /></button><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center border border-gray-100 shadow-sm">{post.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div><div><div className="font-bold text-[14px] text-gray-800">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400 font-['Pretendard']">{post.createdAt?new Date(post.createdAt.toDate()).toLocaleString():'방금 전'}</div></div></div><p className="text-[14px] text-gray-800 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p><div className="bg-gray-50 rounded-xl p-3"><div className="text-[11px] font-bold text-gray-500 mb-3 ml-1">댓글 {(post.comments||[]).length}</div><div className="space-y-3 mb-3">{(post.comments||[]).map((c,i)=>(<div key={i} className="flex gap-2 relative group items-start"><div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">{c.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div><div className="flex flex-col flex-1 pb-1"><span className="font-bold text-[12px] text-gray-800">{c.author==='me'?'연지':'데이다라'}</span><span className="text-[12px] text-gray-600 break-words pr-5">{c.content}</span></div><button onClick={()=>handleDeleteComment(post.id, c)} className="absolute right-0 top-0 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>))}</div><div className="flex gap-2 mt-2 items-center"><input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글 달기..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner focus:border-gray-200 focus:bg-white transition-all" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id)} /><button onClick={()=>handleAddComment(post.id)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-colors ${commentInputs[post.id]?.trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-500'}`}>{commentInputs[post.id]?.trim()?'게시':'호출'}</button></div></div></div>))}</div></div>}
                     </main>
                     <nav className="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center h-[70px] pb-safe z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]"><div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition ${activeTab==='friends'?'text-gray-900':'text-gray-400'}`}><svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab==='friends'?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span className="text-[10px] font-semibold">친구</span></div><div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition ${activeTab==='chat'?'text-gray-900':'text-gray-400'}`}><svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab==='chat'?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span className="text-[10px] font-semibold tracking-tighter">채팅</span></div><div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition ${activeTab==='feed'?'text-gray-900':'text-gray-400'}`}><svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab==='feed'?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg><span className="text-[10px] font-semibold tracking-tighter">게시물</span></div></nav>
                 </div>
