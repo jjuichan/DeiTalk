@@ -112,7 +112,7 @@
         );
 
         const IconTrash = () => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         );
 
         function App() {
@@ -141,7 +141,12 @@
 
             const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
             const [notifEnabled, setNotifEnabled] = useState(localStorage.getItem('notif_enabled') !== 'false');
+            
+            // 🌟 메시지 옵션 관련 상태
             const [selectedMsgId, setSelectedMsgId] = useState(null);
+            const [editingMessageId, setEditingMessageId] = useState(null);
+            const [editingMessageText, setEditingMessageText] = useState('');
+
             const [profileTarget, setProfileTarget] = useState(null); 
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
@@ -226,13 +231,40 @@
                 return "통신 장애 났다. 음!";
             };
 
+            // 🌟 메시지 전송 및 빈 메시지 처리 (먼저 말 걸기)
             const handleSend = async () => {
-                if (!inputText.trim() || !currentRoomId) return;
+                if (!currentRoomId) return;
                 const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
-                const text = inputText; setInputText(''); setIsTyping(true);
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
+                // 🌟 빈 메시지 전송 로직 (데이다라가 이어서 말하거나 답답해하며 먼저 말걸기)
+                if (!inputText.trim()) {
+                    setIsTyping(true);
+                    const myLastMsg = [...messages].reverse().find(m => m.sender === 'me');
+                    const deidaraLastMsg = [...messages].reverse().find(m => m.sender === 'deidara');
+
+                    let prompt = SYSTEM_PROMPT;
+                    if (myLastMsg) {
+                        prompt += `\n연지가 예전에 한 말: "${myLastMsg.text}"\n방금 연지가 아무 말 없이 너를 빤히 쳐다보고 있어. 직전에 연지가 했던 말에 이어서 대답하거나, 시비 걸듯이 틱틱거리며 한 마디 더 해봐.`;
+                    } else if (deidaraLastMsg) {
+                        prompt += `\n네가 방금 한 말: "${deidaraLastMsg.text}"\n연지가 대답이 없자 네가 답답해하며 이어서 한 마디 더 덧붙이는 상황이야.`;
+                    } else {
+                        prompt += `\n연지가 아무 말도 없이 가만히 널 쳐다보고 있어. 먼저 건방지게, 하지만 내심 반가운 티를 내며 말을 걸어봐.`;
+                    }
+
+                    const history = messages.slice(-5).map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
+                    const resp = await fetchAPI(history, prompt);
+                    
+                    await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
+                    await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
+                    
+                    setIsTyping(false);
+                    return;
+                }
+
+                // 일반 메시지 전송 로직
+                const text = inputText; setInputText(''); setIsTyping(true);
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: text, updatedAt: serverTimestamp() }, { merge: true });
 
@@ -246,7 +278,40 @@
                 if (notifEnabled && document.hidden) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
             };
 
-            // 🌟 누락되었던 피드 게시물 등록 함수 추가
+            // 🌟 메시지 수정/삭제/재생성 함수
+            const handleEditMessage = async (msgId) => {
+                if(!editingMessageText.trim()) return;
+                const { doc: fdoc, updateDoc } = window.firebaseAPI;
+                await updateDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: editingMessageText });
+                setEditingMessageId(null);
+                setSelectedMsgId(null);
+            };
+
+            const handleDeleteMessage = async (msgId) => {
+                if(!confirm('메시지를 삭제하시겠습니까?')) return;
+                const { doc: fdoc, deleteDoc } = window.firebaseAPI;
+                await deleteDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`));
+                setSelectedMsgId(null);
+            };
+
+            const handleRegenerateMessage = async (msgId) => {
+                const targetIndex = messages.findIndex(m => m.id === msgId);
+                if(targetIndex === -1) return;
+                setIsTyping(true);
+                const { doc: fdoc, updateDoc } = window.firebaseAPI;
+                
+                // 해당 메시지 이전의 대화 기록만 참조
+                const historyContext = messages.slice(Math.max(0, targetIndex - 6), targetIndex).map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
+                
+                const prompt = `${SYSTEM_PROMPT}\n(지침: 네가 방금 한 대답을 취소하고, 완전히 다른 표현으로 다시 틱틱거리면서 대답해 봐.)`;
+                const resp = await fetchAPI(historyContext, prompt);
+                
+                await updateDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: resp });
+                setIsTyping(false);
+                setSelectedMsgId(null);
+            };
+
+            // 🌟 피드 게시물 등록 함수
             const handleAddPost = async () => {
                 if (!postInput.trim() || !user || !db) return;
                 setIsPosting(true);
@@ -261,7 +326,7 @@
                     });
                     setPostInput('');
 
-                    // 🌟 게시글 작성 후 데이다라 자동 댓글 추가
+                    // 게시글 작성 후 데이다라 자동 댓글 추가
                     const prompt = `${SYSTEM_PROMPT}\n연지가 막 피드에 "${myContent}"라고 글을 올렸어. 네가 제일 먼저 틱틱거리면서 관심 없는 척 짧게(1~2문장) 댓글을 달아봐.`;
                     const resp = await fetchAPI([{role:'user', parts:[{text:'피드에 댓글 달아줘'}]}], prompt);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), {
@@ -274,7 +339,7 @@
                 }
             };
 
-            // 🌟 누락되었던 데이다라 피드 자동 생성 함수 추가
+            // 🌟 데이다라 피드 자동 생성 함수
             const handleDeidaraNewPost = async () => {
                 if (!user || !db) return;
                 setIsPosting(true);
@@ -296,7 +361,6 @@
                 }
             };
 
-            // 🌟 누락되었던 이미지 업로드 핸들러 추가
             const handleImageUploadUI = (e, type, target) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -308,12 +372,13 @@
                 e.target.value = ''; // 같은 파일을 다시 선택할 수 있도록 초기화
             };
 
+            // 🌟 피드 대댓글 및 빈 댓글 처리
             const handleAddComment = async (postId, postContent) => {
                 const commentText = commentInputs[postId]?.trim(); 
                 const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
                 
                 if (!commentText) {
-                    // 🌟 빈 댓글 전송 시 데이다라가 먼저 댓글 달게끔 처리
+                    // 빈 댓글 전송 시 데이다라가 먼저 댓글 달게끔 처리
                     setIsPosting(true);
                     const prompt = `${SYSTEM_PROMPT}\n연지가 쓴 피드 글: "${postContent}"\n이 글에 네가 틱틱거리며 참견하는 짧은 댓글을 하나 더 달아봐.`;
                     const resp = await fetchAPI([{role:'user', parts:[{text:'댓글 하나 더 달아줘'}]}], prompt);
@@ -329,6 +394,15 @@
                 const resp = await fetchAPI([{role:'user', parts:[{text:'대댓글 달아줘'}]}], prompt);
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 setIsPosting(false);
+            };
+
+            // 🌟 피드 댓글 삭제 처리
+            const handleDeleteComment = async (postId, commentObj) => {
+                if(!confirm("댓글을 삭제하시겠습니까?")) return;
+                const { doc: fdoc, updateDoc, arrayRemove } = window.firebaseAPI;
+                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), {
+                    comments: arrayRemove(commentObj)
+                });
             };
 
             // 🌟 렉 해결 & 경계 계산 크롭 모달
@@ -402,12 +476,37 @@
                             <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                 <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     {msg.sender !== 'me' && <div onClick={() => setProfileTarget('deidara')} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
-                                    <div className="flex flex-col">
+                                    <div className="flex flex-col w-full">
                                         {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
+                                        
                                         <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            <div onClick={() => setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id)} className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm ${msg.sender === 'me' ? 'bg-[#FEE500]' : 'bg-white'}`}>{msg.text}</div>
-                                            <span className="text-[9px] text-gray-500 mb-0.5">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
+                                            {/* 메시지 수정 모드 */}
+                                            {editingMessageId === msg.id ? (
+                                                <div className="flex gap-2 w-[220px] bg-white p-2.5 rounded-2xl shadow-sm border border-gray-200">
+                                                    <textarea value={editingMessageText} onChange={e=>setEditingMessageText(e.target.value)} className="w-full text-[13px] p-1 border-none outline-none resize-none bg-gray-50 rounded custom-scrollbar" rows="2" />
+                                                    <div className="flex flex-col gap-1.5 justify-end">
+                                                        <button onClick={() => handleEditMessage(msg.id)} className="text-[11px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded">저장</button>
+                                                        <button onClick={() => setEditingMessageId(null)} className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">취소</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div onClick={() => { setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id); setEditingMessageId(null); }} className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${msg.sender === 'me' ? 'bg-[#FEE500]' : 'bg-white'}`}>{msg.text}</div>
+                                                    <span className="text-[9px] text-gray-500 mb-0.5 whitespace-nowrap">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
+                                                </>
+                                            )}
                                         </div>
+
+                                        {/* 🌟 메시지 옵션 버튼 (수정/삭제/재생성) */}
+                                        {selectedMsgId === msg.id && editingMessageId !== msg.id && (
+                                            <div className={`flex gap-3 mt-1.5 text-[11px] font-bold ${msg.sender === 'me' ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+                                                <button onClick={() => { setEditingMessageId(msg.id); setEditingMessageText(msg.text); }} className="text-gray-500 hover:text-blue-500 transition-colors">수정</button>
+                                                {msg.sender === 'deidara' && (
+                                                    <button onClick={() => handleRegenerateMessage(msg.id)} className="text-gray-500 hover:text-green-600 transition-colors">재생성</button>
+                                                )}
+                                                <button onClick={() => handleDeleteMessage(msg.id)} className="text-gray-500 hover:text-red-500 transition-colors">삭제</button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -445,8 +544,9 @@
 
                     <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
                         {activeTab === 'friends' && (
-                            <div className="flex-1 bg-gray-50 flex flex-col">
-                                <div className="bg-white px-4 py-3 mb-2 shadow-sm border-b border-gray-100">
+                            <div className="flex-1 bg-white flex flex-col">
+                                {/* 내 프로필 영역 */}
+                                <div className="px-4 py-3 border-b border-gray-100">
                                     <div className="text-xs font-bold text-gray-400 mb-2 ml-1">내 프로필</div>
                                     <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
                                         <div className="w-16 h-16 rounded-[22px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div>
@@ -456,7 +556,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-white px-4 py-3 flex-1 shadow-sm border-t border-gray-100">
+                                {/* 친구 프로필 영역 (구분선 처리됨) */}
+                                <div className="px-4 py-3 flex-1">
                                     <div className="text-xs font-bold text-gray-400 mb-2 ml-1">친구 1</div>
                                     <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
                                         <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
@@ -471,7 +572,7 @@
                         {activeTab === 'chat' && (
                             <div className="flex-1 px-2 py-2 bg-white">
                                 {chatRooms.length === 0 ? <p className="text-center mt-10 text-gray-400">대화 중인 방이 없습니다.</p> : chatRooms.map(room => (
-                                    <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:bg-gray-100 relative group transition-colors"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 pr-8"><h3 className="font-bold text-gray-800 truncate">{room.name}</h3><p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "방이 생성되었습니다!"}</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("방을 삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/rooms/${room.id}`)); }} className="absolute right-4 p-2 opacity-0 group-hover:opacity-100 transition-all text-red-500 active:scale-90"><IconTrash /></button></div>
+                                    <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:bg-gray-100 relative group transition-colors"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 pr-8"><h3 className="font-bold text-gray-800 truncate">{room.name}</h3><p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "방이 생성되었습니다!"}</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("방을 삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/rooms/${room.id}`)); }} className="absolute right-4 p-2 opacity-0 group-hover:opacity-100 transition-all text-red-500 active:scale-90"><div className="w-4 h-4"><IconTrash /></div></button></div>
                                 ))}
                             </div>
                         )}
@@ -487,7 +588,7 @@
                                 <div className="space-y-3 px-3">
                                     {posts.map(post=>(
                                         <div key={post.id} className="bg-white rounded-2xl shadow-sm p-4 relative msg-anim border border-black/5">
-                                            <button onClick={() => { if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`)); }} className="absolute top-4 right-4 text-gray-300 active:text-red-500 transition-colors"><IconTrash /></button>
+                                            <button onClick={() => { if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`)); }} className="absolute top-4 right-4 text-gray-300 active:text-red-500 transition-colors"><div className="w-4 h-4"><IconTrash /></div></button>
                                             <div className="flex items-center gap-3 mb-3">
                                                 <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center border border-gray-100 shadow-sm">{post.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
                                                 <div><div className="font-bold text-[14px] text-gray-800">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400">{safeDateStr(post.createdAt)}</div></div>
@@ -499,10 +600,14 @@
                                                     {(post.comments||[]).map((c,i)=>(
                                                         <div key={i} className="flex gap-2 relative group items-start">
                                                             <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">{c.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
-                                                            <div className="flex flex-col flex-1 pb-1">
+                                                            <div className="flex flex-col flex-1 pb-1 pr-6 relative">
                                                                 <span className="font-bold text-[12px] text-gray-800">{c.author==='me'?'연지':'데이다라'}</span>
-                                                                <span className="text-[12px] text-gray-600 break-words pr-5 font-['Pretendard'] leading-tight">{c.content}</span>
+                                                                <span className="text-[12px] text-gray-600 break-words font-['Pretendard'] leading-tight">{c.content}</span>
                                                             </div>
+                                                            {/* 🌟 피드 댓글 삭제 버튼 */}
+                                                            <button onClick={() => handleDeleteComment(post.id, c)} className="absolute right-0 top-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div className="w-3.5 h-3.5"><IconTrash /></div>
+                                                            </button>
                                                         </div>
                                                     ))}
                                                 </div>
