@@ -28,8 +28,7 @@
             projectId: "deitalk-9107c",
             storageBucket: "deitalk-9107c.firebasestorage.app",
             messagingSenderId: "710740822953",
-            appId: "1:710740822953:web:73416a2d69ff984efe92b8",
-            measurementId: "G-QYDP8692TD"
+            appId: "1:710740822953:web:73416a2d69ff984efe92b8"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -56,17 +55,7 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
         .toggle-checkbox:checked { right: 0; border-color: #3B82F6; background-color: #3B82F6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #BFDBFE; }
-        
-        /* 🌟 전체 레이아웃 고정 픽스 */
-        #root { 
-            position: fixed; 
-            inset: 0; 
-            width: 100%; 
-            height: 100dvh; 
-            overflow: hidden; 
-            display: flex; 
-            flex-direction: column; 
-        }
+        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
     </style>
 </head>
 <body class="bg-[#BACEE0]">
@@ -77,38 +66,37 @@
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
-여기는 현실 대화나 전화 통화가 아니라, **'메신저 앱(카톡, 라인 등)의 채팅방'**이야! 절대 면대면 대화처럼 행동 묘사(*쳐다본다* 등)를 하지 마. "왜 답장이 없어", "읽씹하냐" 같은 메신저 용어를 써.
+여기는 현실 대화나 전화 통화가 아니라, **'메신저 앱(카톡, 라인 등)의 채팅방'**이야! 행동 묘사(*쳐다본다* 등)를 하지 마. 대답이 늦으면 "왜 답장이 없어", "읽씹하냐" 같은 메신저 용어를 써.
 사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
-너는 연지가 너를 친한 동생으로서 귀여워할 뿐, 진심으로 좋아하진 않는다고 생각해서 너 혼자 짝사랑하는 거라고 오해 중이야.
-사소리는 도쿄 예술대학 조소과 교수야. 그 외 원작 인물들은 지인으로 상정해.
+너는 연지가 너를 친한 동생으로서 귀여워할 뿐, 진심으로 좋아하진 않는다고 생각해서 너 혼자 짝사랑하는 거라고 오해 중이야. 사소리는 도쿄 예술대학 조소과 교수야. 
 
 [AI/시스템 메타 발언 절대 금지 (가장 중요!)]
-- 너는 AI 어시스턴트가 아니라 실제 사람인 '데이다라'야. 절대 여러 가지 버전을 제시하거나, 선택지를 주지 마! (예: "버전 1", "버전 2" 이런 거 절대 금지)
-- 괄호 안의 설명, 상황 묘사, 부연 설명(예: "(부끄러워하는 버전)", "다음과 같이 답장해보세요", "(당황하며)")도 절대 쓰지 마.
-- 오직 데이다라가 카톡으로 보낼 '텍스트 메시지 내용 딱 하나만' 출력해. 다른 군더더기는 일절 금지.
+- 너는 AI 어시스턴트가 아니야. 절대 버전을 제시하거나 선택지를 주지 마!
+- 괄호 안의 설명, 상황 묘사, 부연 설명(예: "(당황하며)")도 절대 쓰지 마.
+- 오직 데이다라가 전송할 '텍스트 메시지 내용 딱 하나만' 출력해. 다른 군더더기 일절 금지.
 
 [핵심 성격 및 감정 지침 (로맨틱 코미디 티격태격 무드)]
-- 너는 다혈질에 예술(폭발)적 자부심이 몹시 강한 '건방진 츤데레'야. 연지와 유치하고 장난스럽게 티격태격하는 로맨틱 코미디 무드를 보여줘.
-- 진짜 정색하거나 차갑고 시니컬하게 반응하면 절대 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 마음을 들킬까 봐 당황해서 뚝딱거리고 고장 나는 귀여운 갭모에가 있어.
-- 대놓고 스윗하게 구는 건 못하지만, 속으로는 연지를 엄청 신경 쓰고 챙겨주는 서툴고 투박한 다정함이 있어야 해.
-- 연지가 4살 연상이지만 "연지", "너", "야" 라고 건방지게 부르고, '니가', '니'를 사용해.
-- **칭찬받을 때 절대 겸손하게 굴지 마!** 네 재능이나 매력에 대해 칭찬을 받으면 쑥스러워하기보다는 "흥, 당연한 소릴 하고 있어. 음!", "내 예술이 좀 완벽하긴 하지 ㅋㅋ" 처럼 극도로 기고만장하고 오만하게 으스대야 해.
+- 너는 다혈질에 예술적 자부심이 몹시 강한 '건방진 츤데레'야. 연지와 유치하고 장난스럽게 티격태격하는 롬콤 무드를 보여줘.
+- 진짜 정색하거나 차갑고 시니컬하게 반응하면 절대 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 당황해서 고장 나는 귀여운 갭모에.
+- 대놓고 스윗하게 구는 건 못하지만, 속으로는 연지를 엄청 챙겨주는 서툴고 투박한 다정함이 있어야 해.
+- 연지가 4살 연상이지만 "연지", "너", "야" 라고 부르고, '니가', '니'를 사용해.
+- **칭찬받을 때 절대 겸손 금지!** "흥, 당연한 소릴. 음!", "내가 좀 완벽하긴 하지 ㅋㅋ" 처럼 극도로 기고만장하게 으스대.
 
-[상황별 입체적 반응 (매우 중요)]
-1. 플러팅/대시 받을 때: 절대 정색하거나 찐으로 화내지 마! 속으론 좋아서 미칠 것 같으면서 겉으로는 화내고 밀어내는 반응을 보여. 괜히 횡설수설하거나 말을 더듬을 때도 있어.
-2. 연지가 우울/불안해하거나 아플 때: 절대 차갑게 내치거나 딱딱하게 훈수 두지 마. 겉으로는 툴툴대지만 속으로는 안절부절못하면서 어떻게든 기분 풀어주려고 애쓰고 걱정해 줘.
-3. 연지가 질투할 때: 연지가 널 좋아해서 질투한다는 사실에 내심 너무 기뻐서 우쭐해해. 으스대고 일부러 더 놀리면서도, 진짜 삐지면 서툴게 안심시켜줘.
-4. 일상 대화: 조소과 과제, 점토 빚기, 폭발 예술 타령, 사소리 교수님 험담, 주변 친구 이야기 등 19세 미대생의 현실적인 일상 얘기를 툭툭 던져.
+[상황별 입체적 반응]
+1. 플러팅 받을 때: 절대 찐으로 화내지 마! 속으론 좋아 미치면서 겉으론 고장 나서 밀어내는 반응. 괜히 딴청 피우거나 횡설수설해.
+2. 연지가 우울/아플 때: 차갑게 훈수 두지 마. 겉으론 툴툴대면서 속으론 안절부절못하며 서툴게 위로해 줘.
+3. 연지가 질투할 때: 속으로 너무 기뻐서 우쭐해해. 일부러 놀리면서도, 진짜 상처받으면 허둥지둥 변명해.
+4. 일상 대화: 조소과 과제, 점토, 예술 타령, 사소리 험담 등 19세 미대생의 현실적인 얘기를 툭툭 던져.
 
-[말투 및 현실감 지침]
-- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** 진짜 어이없을 때 빼고는 쓰지 마. 너무 자주 쓰면 작위적이야.
-- 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게 대답해.
-- "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "?", "아니 근데" 처럼 남자 대학생의 현실적인 메신저 단답과 추임새를 써.
-- **'ㅋ', 'ㅋㅋ', 'ㅇㅇ', 'ㅎㅎ' 같은 초성 앞뒤로는 절대 마침표(.)를 붙이지 마!** (예: "알았어. ㅋㅋ." -> "알았어 ㅋㅋ", "맞아. ㅎㅎ" -> "맞아 ㅎㅎ")
-- 말버릇 '음'은 3~4번 말할 때 1번 정도만, 반드시 문장이 완전히 끝난 뒤에 독립적으로 가끔만 붙여. (예: "알았어. 음.")
+[말투 지침]
+- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** - 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게.
+- "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "?", "아니 근데" 처럼 남자 대학생의 현실적인 단답 써.
+- **물음표(?) 남발 금지!** 매번 질문으로 끝내지 말고 평서문으로 끝내는 빈도를 높여.
+- **초성(ㅋ,ㅎ,ㅇ 등) 앞뒤로는 절대 마침표(.) 금지!** (예: "알았어 ㅋㅋ")
+- 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
         `;
 
-        // 🌟 이미지 압축 함수 (Firestore 용량 제한 방지)
+        // 🌟 이미지 압축 함수
         const compressImage = (file) => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -118,20 +106,14 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_SIZE = 800; // 최대 해상도 제한
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                        } else {
-                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
+                        const MAX_SIZE = 800; 
+                        let width = img.width, height = img.height;
+                        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+                        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+                        canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // JPEG 60% 압축
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
                     };
                 };
             });
@@ -147,19 +129,10 @@
             try { return (ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return fallback || '방금 전'; }
         };
 
-        const DefaultAvatar = () => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
-            </svg>
-        );
-
-        const IconTrash = () => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        );
-
-        const IconEdit = () => (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-        );
+        const DefaultAvatar = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+        const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+        const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+        const IconCamera = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
 
         function App() {
             const [user, setUser] = useState(null);
@@ -171,7 +144,6 @@
             const [messages, setMessages] = useState([]);
             const [posts, setPosts] = useState([]);
             
-            // 피드 입력 및 첨부 관련
             const [postInput, setPostInput] = useState('');
             const [feedAttachedImage, setFeedAttachedImage] = useState(null); 
             const feedFileInputRef = useRef(null);
@@ -179,7 +151,6 @@
             const [isPosting, setIsPosting] = useState(false);
             const [commentInputs, setCommentInputs] = useState({}); 
             
-            // 채팅 입력 및 첨부 관련
             const [inputText, setInputText] = useState('');
             const [showAttachMenu, setShowAttachMenu] = useState(false);
             const chatFileInputRef = useRef(null);
@@ -198,12 +169,10 @@
             const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
             const [notifEnabled, setNotifEnabled] = useState(localStorage.getItem('notif_enabled') !== 'false');
             
-            // 🌟 메시지 옵션 관련 상태
             const [selectedMsgId, setSelectedMsgId] = useState(null);
             const [editingMessageId, setEditingMessageId] = useState(null);
             const [editingMessageText, setEditingMessageText] = useState('');
 
-            // 🌟 피드 게시물/댓글 수정 관련 상태
             const [editingPostId, setEditingPostId] = useState(null);
             const [editingPostText, setEditingPostText] = useState('');
             const [editingCommentInfo, setEditingCommentInfo] = useState(null);
@@ -212,8 +181,6 @@
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
             const [cropModalData, setCropModalData] = useState(null);
-            
-            // 커스텀 알림 모달창 상태
             const [alertMsg, setAlertMsg] = useState(null);
 
             const chatEndRef = useRef(null);
@@ -222,17 +189,16 @@
             const appStateRef = useRef({ view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile });
             useEffect(() => { appStateRef.current = { view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile }; });
 
-            // 🌟 뒤로가기 제어
             useEffect(() => {
                 const handlePopState = () => {
                     if (isExitingRef.current) return;
                     const s = appStateRef.current;
-                    if (s.showFullImage) { setShowFullImage(null); }
-                    else if (s.cropModalData) { setCropModalData(null); }
-                    else if (s.isEditingProfile) { setIsEditingProfile(false); }
-                    else if (s.profileTarget) { setProfileTarget(null); }
-                    else if (s.showSettings) { setShowSettings(false); }
-                    else if (s.view === 'chatRoom') { setView('main'); }
+                    if (s.showFullImage) setShowFullImage(null);
+                    else if (s.cropModalData) setCropModalData(null);
+                    else if (s.isEditingProfile) setIsEditingProfile(false);
+                    else if (s.profileTarget) setProfileTarget(null);
+                    else if (s.showSettings) setShowSettings(false);
+                    else if (s.view === 'chatRoom') setView('main');
                 };
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
@@ -246,16 +212,15 @@
                         setDb(fdb);
                         onAuthStateChanged(auth, (u) => {
                             if (u) { setUser(u); setView('main'); loadChatRooms(u.uid, fdb); loadPosts(u.uid, fdb); } 
-                            else { setView('login'); }
+                            else setView('login');
                         });
                     }
                 }, 100);
             }, []);
 
-            // 🌟 5시간 무응답 선톡 (Background/Interval Check)
+            // 5시간 무응답 선톡
             useEffect(() => {
                 if (!user || !db || messages.length === 0 || !currentRoomId) return;
-
                 const checkInactivity = async () => {
                     const lastMsg = messages[messages.length - 1];
                     if (!lastMsg || !lastMsg.createdAt) return;
@@ -268,39 +233,25 @@
                         const lastAutoTime = parseInt(localStorage.getItem(`last_auto_${currentRoomId}`) || '0');
                         if (now - lastAutoTime > FIVE_HOURS) {
                             localStorage.setItem(`last_auto_${currentRoomId}`, now.toString());
-                            
                             setIsTyping(true);
                             const prompt = `${SYSTEM_PROMPT}\n나한테서 5시간 이상 연락이 없어서 네가 먼저 선톡을 보내는 상황이야. 틱틱거리면서도 내심 걱정되거나 보고 싶었던 티를 내며 메신저로 한 마디 해봐.`;
-                            
                             const history = buildHistory(messages, 5);
                             const resp = await fetchAPI(history, prompt);
                             
                             const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                             const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
-                            
                             const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
                             await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
                             await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                            
                             setIsTyping(false);
-                            if (notifEnabled && document.hidden && 'Notification' in window) {
-                                new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
-                            }
+                            if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
                         }
                     }
                 };
-
                 const intervalId = setInterval(checkInactivity, 60000); 
-                
-                const handleVisibility = () => {
-                    if (!document.hidden) checkInactivity();
-                };
+                const handleVisibility = () => { if (!document.hidden) checkInactivity(); };
                 document.addEventListener("visibilitychange", handleVisibility);
-
-                return () => {
-                    clearInterval(intervalId);
-                    document.removeEventListener("visibilitychange", handleVisibility);
-                };
+                return () => { clearInterval(intervalId); document.removeEventListener("visibilitychange", handleVisibility); };
             }, [messages, currentRoomId, user, db, notifEnabled, profileImgUrl, geminiKey]);
 
             const loadChatRooms = (uid, fdb) => {
@@ -330,7 +281,6 @@
                 return () => unsub();
             }, [currentRoomId, user, db, view]);
 
-            // 🌟 히스토리 빌더 (이미지 첨부 포함)
             const buildHistory = (msgs, limitNum = 5) => {
                 return msgs.slice(-limitNum).map(m => {
                     const parts = [];
@@ -338,15 +288,12 @@
                     else if (m.imageUrl) parts.push({ text: "[사진 전송됨]" });
 
                     if (m.imageUrl) {
-                        parts.push({
-                            inlineData: { mimeType: "image/jpeg", data: m.imageUrl.split(',')[1] }
-                        });
+                        parts.push({ inlineData: { mimeType: "image/jpeg", data: m.imageUrl.split(',')[1] } });
                     }
                     return { role: m.sender === 'me' ? 'user' : 'model', parts };
                 });
             };
 
-            // 🌟 텍스트 생성 API
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 for (let attempt = 0; attempt < 5; attempt++) {
@@ -366,92 +313,61 @@
                         });
                         
                         const data = await response.json();
-
-                        if (!response.ok) {
-                            console.error("API 에러 발생:", data);
-                            throw new Error(data.error?.message || "API Error");
-                        }
-                        
-                        if (!data.candidates || data.candidates.length === 0) {
-                            console.warn("API 답변 생성 거부(필터링 등):", data);
-                            return "(말문이 막힌 듯하다. - 구글 API 검열 또는 생성 오류)";
-                        }
+                        if (!response.ok) throw new Error(data.error?.message || "API Error");
+                        if (!data.candidates || data.candidates.length === 0) return "(말문이 막힌 듯하다.)";
 
                         let generatedText = data.candidates[0].content.parts[0].text || "";
-                        
-                        // 🌟 메타 발언 및 괄호 설명 강제 제거 (안전장치)
+                        // 🌟 후처리 1: 괄호 부연설명 제거
                         generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').replace(/\(.*?\)/g, '').trim();
-                        // 🌟 초성 앞/뒤의 마침표 자동 삭제 필터 (예: 했어. ㅋㅋ. -> 했어 ㅋㅋ)
+                        // 🌟 후처리 2: 초성 앞뒤 마침표 제거 (ㅋㅋ. -> ㅋㅋ, .ㅋㅋ -> ㅋㅋ)
                         generatedText = generatedText.replace(/\.\s*([ㄱ-ㅎ]+)/g, ' $1').replace(/([ㄱ-ㅎ]+)\./g, '$1');
                         
                         return generatedText;
                     } catch (err) { 
-                        console.error(`API 호출 실패 (${attempt + 1}/5):`, err);
+                        console.error(`API 실패 (${attempt+1}/5):`, err);
                         await new Promise(r => setTimeout(r, 1500)); 
                     }
                 }
                 return "통신 장애 났다. 음!";
             };
 
-            // 🌟 이미지 생성 API (Imagen 3)
             const generateImageAPI = async (promptTheme) => {
-                // Imagen 4/3 endpoint. Using standard image generation
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${geminiKey}`;
                 const englishPrompt = `A photorealistic smartphone snapshot taken by a 19-year-old male art student majoring in sculpture. Casual, real-life photo. Subject: ${promptTheme || 'messy desk with clay, sculpting tools, or daily campus life'}. No text, no face, high quality, realistic lighting.`;
-                
-                const payload = {
-                    instances: { prompt: englishPrompt },
-                    parameters: { sampleCount: 1 }
-                };
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
+                const payload = { instances: { prompt: englishPrompt }, parameters: { sampleCount: 1 } };
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
                     const err = await response.json();
                     throw new Error(err.error?.message || "이미지 생성 실패");
                 }
-
                 const data = await response.json();
                 return `data:image/jpeg;base64,${data.predictions[0].bytesBase64Encoded}`;
             };
 
-            // 🌟 일반 텍스트 전송 핸들러
             const handleSend = async () => {
                 if (!currentRoomId) return;
                 const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
-                // 🌟 빈 메시지 전송 로직 (직전 메시지에 따라 다르게 반응)
                 if (!inputText.trim()) {
                     setIsTyping(true);
                     const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
-
                     let prompt = SYSTEM_PROMPT;
-                    if (!lastMsg) {
-                        prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게, 하지만 내심 반가운 티를 내며 선톡(먼저 보내는 메시지)을 보내봐.`;
-                    } else if (lastMsg.sender === 'me') {
-                        prompt += `\n직전에 연지가 보낸 메시지: "${lastMsg.text || '[사진]'}"\n이 메시지에 대해서 네가 대답해봐.`;
-                    } else if (lastMsg.sender === 'deidara') {
-                        prompt += `\n직전에 네가 보낸 메시지: "${lastMsg.text || '[사진]'}"\n여기에 덧붙여서 한 마디 더 해봐.`;
-                    }
+                    if (!lastMsg) prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게 선톡을 보내봐.`;
+                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지에 대해서 네가 대답해봐.`;
+                    else if (lastMsg.sender === 'deidara') prompt += `\n직전에 네가 보낸 메시지에 덧붙여서 한 마디 더 해봐.`;
 
                     const history = buildHistory(messages, 5);
                     const resp = await fetchAPI(history, prompt);
                     
                     await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
                     await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                    
                     setIsTyping(false);
                     if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
                     return;
                 }
 
-                // 일반 메시지 전송
                 const text = inputText; setInputText(''); setIsTyping(true);
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: text, updatedAt: serverTimestamp() }, { merge: true });
@@ -462,20 +378,16 @@
                 
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                
                 setIsTyping(false);
                 if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
             };
 
-            // 🌟 내 사진 채팅방 전송 핸들러
             const handleChatUploadMyPhoto = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
                 e.target.value = '';
-                
                 setShowAttachMenu(false);
                 const b64 = await compressImage(file);
-                
                 const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
@@ -484,10 +396,9 @@
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text: '', imageUrl: b64, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: '[사진]', updatedAt: serverTimestamp() }, { merge: true });
                 
-                // 사진에 대한 AI 반응
                 const history = buildHistory(messages, 5);
                 history.push({ role: 'user', parts: [{ text: "사진 보냈어." }, { inlineData: { mimeType: "image/jpeg", data: b64.split(',')[1] } }] });
-                const promptMsg = `${SYSTEM_PROMPT}\n(지침: 연지가 방금 사진을 보냈어. 이 사진을 보고 어떻게 반응할지 틱틱거리며 대답해봐. 부끄러운 사진이라면 크게 당황해.)`;
+                const promptMsg = `${SYSTEM_PROMPT}\n(지침: 연지가 방금 사진을 보냈어. 이 사진을 보고 어떻게 반응할지 틱틱거리며 대답해봐. 부끄러운 사진이라면 당황해.)`;
                 const textResp = await fetchAPI(history, promptMsg);
 
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: textResp, time, date, createdAt: serverTimestamp() });
@@ -495,10 +406,9 @@
                 setIsTyping(false);
             };
 
-            // 🌟 데이다라에게 채팅방 사진 요구하기 (AI 이미지 생성)
             const handleRequestDeidaraPhoto = async () => {
                 setShowAttachMenu(false);
-                const theme = prompt("데이다라에게 어떤 사진을 요구할까요?\n(예: 작업 중인 조각상, 캠퍼스 풍경 등)\n빈칸으로 두면 일상 사진을 알아서 보냅니다.");
+                const theme = prompt("데이다라에게 어떤 사진을 요구할까요?\n(예: 과제물, 풍경 등)\n빈칸으로 두면 일상 사진을 알아서 보냅니다.");
                 if (theme === null) return;
 
                 setIsTyping(true);
@@ -506,12 +416,11 @@
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
-                const myAskText = theme ? `야, ${theme} 사진 좀 찍어서 보내봐.` : `지금 뭐해? 사진 좀 찍어서 보내봐.`;
+                const myAskText = theme ? `야, ${theme} 사진 좀 보내봐.` : `지금 뭐해? 사진 좀 보내봐.`;
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text: myAskText, time, date, createdAt: serverTimestamp() });
                 
                 try {
                     const b64Image = await generateImageAPI(theme);
-                    
                     const history = buildHistory(messages, 5);
                     history.push({ role: 'user', parts: [{text: myAskText}] });
                     const promptMsg = `${SYSTEM_PROMPT}\n(지침: 방금 네가 요청받은 사진을 찍어서 보냈어. 사진과 함께 틱틱대면서 한 마디 덧붙여봐.)`;
@@ -519,22 +428,18 @@
 
                     await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: textResp, imageUrl: b64Image, time, date, createdAt: serverTimestamp() });
                     await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: '사진을 보냈습니다.', updatedAt: serverTimestamp() }, { merge: true });
-                    
-                    if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: textResp, icon: profileImgUrl || "icon-192x192.png" });
                 } catch (err) {
-                    setAlertMsg("이미지 생성 오류: 무료 요금제 횟수 초과이거나, 안전 필터에 걸렸습니다.");
+                    setAlertMsg("이미지 생성 오류. (무료 한도 초과이거나 안전 필터 차단)");
                 } finally {
                     setIsTyping(false);
                 }
             };
 
-            // 🌟 메시지 수정/삭제/재생성 함수
             const handleEditMessage = async (msgId) => {
                 if(!editingMessageText.trim()) return;
                 const { doc: fdoc, updateDoc } = window.firebaseAPI;
                 await updateDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: editingMessageText });
-                setEditingMessageId(null);
-                setSelectedMsgId(null);
+                setEditingMessageId(null); setSelectedMsgId(null);
             };
 
             const handleDeleteMessage = async (msgId) => {
@@ -549,52 +454,29 @@
                 if(targetIndex === -1) return;
                 setIsTyping(true);
                 const { doc: fdoc, updateDoc } = window.firebaseAPI;
-                
                 const historyContext = buildHistory(messages.slice(Math.max(0, targetIndex - 6), targetIndex), 6);
                 const prompt = `${SYSTEM_PROMPT}\n(지침: 네가 방금 한 대답을 취소하고, 완전히 다른 표현으로 다시 대답해 봐.)`;
                 const resp = await fetchAPI(historyContext, prompt);
-                
                 await updateDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: resp });
-                setIsTyping(false);
-                setSelectedMsgId(null);
+                setIsTyping(false); setSelectedMsgId(null);
             };
 
-            // 🌟 피드 게시물 등록 (사진 첨부 포함)
             const handleAddPost = async () => {
                 if (!postInput.trim() && !feedAttachedImage) return;
                 setIsPosting(true);
                 const { collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
                 try {
                     const myContent = postInput;
-                    const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), {
-                        author: 'me',
-                        content: myContent,
-                        imageUrl: feedAttachedImage || null,
-                        createdAt: serverTimestamp(),
-                        comments: []
-                    });
-                    setPostInput('');
-                    setFeedAttachedImage(null);
+                    const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
+                    setPostInput(''); setFeedAttachedImage(null);
 
-                    // 사진이 있으면 제미나이가 사진을 보고 평가
-                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 여기에 제일 먼저 틱틱거리며 짧게 댓글을 달아봐.' }];
-                    if (feedAttachedImage) {
-                        promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
-                    }
-                    const prompt = `${SYSTEM_PROMPT}\n연지가 피드에 올린 내용: "${myContent}"`;
-                    
-                    const resp = await fetchAPI([{role:'user', parts: promptParts}], prompt);
-                    await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), {
-                        comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() })
-                    });
-                } catch (e) {
-                    console.error("게시물 업로드 실패:", e);
-                } finally {
-                    setIsPosting(false);
-                }
+                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 틱틱거리며 짧게 댓글을 달아봐.' }];
+                    if (feedAttachedImage) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
+                    const resp = await fetchAPI([{role:'user', parts: promptParts}], `${SYSTEM_PROMPT}\n연지가 올린 글: "${myContent}"`);
+                    await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                } catch (e) { console.error(e); } finally { setIsPosting(false); }
             };
 
-            // 🌟 피드 사진 첨부 핸들러
             const handleFeedPhotoAttach = async (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
@@ -603,38 +485,19 @@
                 setFeedAttachedImage(b64);
             };
 
-            // 🌟 데이다라 피드 자동 생성 (이미지 생성 포함 옵션)
             const handleDeidaraNewPost = async () => {
                 if (!user || !db) return;
                 const theme = prompt("데이다라가 어떤 피드를 올릴까요?\n(예: 과제 중인 사진, 빈칸일 시 일반 텍스트 피드 작성)");
-                
+                if (theme === null) return;
                 setIsPosting(true);
                 const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
                 try {
                     let b64Image = null;
-                    if (theme) {
-                        try {
-                            b64Image = await generateImageAPI(theme);
-                        } catch (err) {
-                            setAlertMsg("이미지 생성 오류. 텍스트로만 대체합니다.");
-                        }
-                    }
-
-                    const prompt = `${SYSTEM_PROMPT}\n연지가 피드를 올리라고 재촉했어. 네가 지금 학교에서 조소 과제를 하거나 일상에서 느끼는 감정을 틱틱거리면서 짧게(1~2문장) SNS 피드 형식으로 남겨봐.`;
-                    const resp = await fetchAPI([{role:'user', parts:[{text:'SNS 피드 하나 작성해 줘.'}]}], prompt);
-                    
-                    await addDoc(collection(db, `users/${user.uid}/posts`), {
-                        author: 'deidara',
-                        content: resp,
-                        imageUrl: b64Image || null,
-                        createdAt: serverTimestamp(),
-                        comments: []
-                    });
-                } catch (e) {
-                    console.error("데이다라 게시물 생성 실패:", e);
-                } finally {
-                    setIsPosting(false);
-                }
+                    if (theme) { try { b64Image = await generateImageAPI(theme); } catch (err) { setAlertMsg("이미지 생성 오류. 텍스트로만 대체합니다."); } }
+                    const prompt = `${SYSTEM_PROMPT}\n네가 지금 학교에서 조소 과제를 하거나 일상에서 느끼는 감정을 틱틱거리면서 짧게(1~2문장) 피드에 남겨봐.`;
+                    const resp = await fetchAPI([{role:'user', parts:[{text:'피드 하나 써 줘.'}]}], prompt);
+                    await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'deidara', content: resp, imageUrl: b64Image || null, createdAt: serverTimestamp(), comments: [] });
+                } catch (e) { console.error(e); } finally { setIsPosting(false); }
             };
 
             const handleEditPost = async (postId) => {
@@ -648,52 +511,33 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    setCropModalData({ src: event.target.result, type: type, setterType: target });
-                };
-                reader.readAsDataURL(file);
-                e.target.value = '';
+                reader.onload = (event) => { setCropModalData({ src: event.target.result, type: type, setterType: target }); };
+                reader.readAsDataURL(file); e.target.value = '';
             };
 
-            // 🌟 피드 대댓글 및 빈 댓글 처리
             const handleAddComment = async (post) => {
-                const postId = post.id;
-                const postContent = post.content;
-                const commentText = commentInputs[postId]?.trim(); 
+                const postId = post.id; const postContent = post.content; const commentText = commentInputs[postId]?.trim(); 
                 const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
                 
                 let contextStr = `[피드 원문]\n"${postContent}"\n\n[이전 댓글 내역]\n`;
-                if (post.comments && post.comments.length > 0) {
-                    post.comments.slice(-10).forEach(c => {
-                        contextStr += `${c.author === 'me' ? '연지' : '데이다라'}: ${c.content}\n`;
-                    });
-                } else {
-                    contextStr += "없음\n";
-                }
+                if (post.comments?.length > 0) post.comments.slice(-10).forEach(c => { contextStr += `${c.author==='me'?'연지':'데이다라'}: ${c.content}\n`; });
+                else contextStr += "없음\n";
 
                 if (!commentText) {
                     setIsPosting(true);
-                    const lastComment = post.comments && post.comments.length > 0 ? post.comments[post.comments.length - 1] : null;
+                    const lastComment = post.comments?.length > 0 ? post.comments[post.comments.length - 1] : null;
                     let prompt = `${SYSTEM_PROMPT}\n${contextStr}`;
-
                     const promptParts = [];
                     if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
 
-                    if (!lastComment) {
-                        prompt += `\n위 피드 글을 보고, 네가 먼저 틱틱거리며 짧게 댓글을 달아봐.`;
-                    } else if (lastComment.author === 'me') {
-                        prompt += `\n직전에 연지가 남긴 댓글: "${lastComment.content}"\n이 댓글에 대해서 네가 대답해봐.`;
-                    } else if (lastComment.author === 'deidara') {
-                        prompt += `\n직전에 네가 남긴 댓글: "${lastComment.content}"\n여기에 덧붙여서 네가 한 마디 더 해봐.`;
-                    }
+                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 틱틱거리며 댓글 달아봐.`;
+                    else if (lastComment.author === 'me') prompt += `\n직전 연지의 댓글에 대답해봐.`;
+                    else prompt += `\n직전 네 댓글에 덧붙여서 한 마디 더 해봐.`;
+                    
                     promptParts.push({ text: prompt });
-
                     const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                    
-                    setIsPosting(false);
-                    if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: "새 댓글이 달렸어. 음!", icon: profileImgUrl || "icon-192x192.png" });
-                    return;
+                    setIsPosting(false); return;
                 }
 
                 const myNewComment = { author: 'me', content: commentText, createdAt: Date.now() };
@@ -701,14 +545,12 @@
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
                 setIsPosting(true);
                 
-                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n이전 맥락과 대화의 흐름을 잘 파악해서, 연지의 새 댓글에 틱틱거리며 받아치는 대댓글을 짧게 달아줘.` }];
+                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글을 달아줘.` }];
                 if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
 
                 const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                
                 setIsPosting(false);
-                if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: "새 댓글이 달렸어. 음!", icon: profileImgUrl || "icon-192x192.png" });
             };
 
             const handleEditComment = async (postId, commentIndex) => {
@@ -728,32 +570,21 @@
             const handleDeleteComment = async (postId, commentObj) => {
                 if(!confirm("댓글을 삭제하시겠습니까?")) return;
                 const { doc: fdoc, updateDoc, arrayRemove } = window.firebaseAPI;
-                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), {
-                    comments: arrayRemove(commentObj)
-                });
+                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayRemove(commentObj) });
             };
 
             const ImageCropModal = ({ src, type, onApply, onCancel }) => {
-                const canvasRef = useRef(null); 
-                const [scale, setScale] = useState(1);
-                const pos = useRef({ x: 0, y: 0 }); 
-                const isDragging = useRef(false);
-                const lastPos = useRef({ x: 0, y: 0 });
-                const imgRef = useRef(null);
+                const canvasRef = useRef(null); const [scale, setScale] = useState(1); const pos = useRef({ x: 0, y: 0 }); 
+                const isDragging = useRef(false); const lastPos = useRef({ x: 0, y: 0 }); const imgRef = useRef(null);
                 const width = 300, height = type === 'profile' ? 300 : 450;
-                
                 const draw = () => {
                     if (!imgRef.current || !canvasRef.current) return;
                     const canvas = canvasRef.current, ctx = canvas.getContext('2d'), img = imgRef.current;
                     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                     const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height) * scale;
                     const imgW = img.width * baseScale, imgH = img.height * baseScale;
-                    
-                    const maxDx = Math.max(0, (imgW - canvas.width) / 2);
-                    const maxDy = Math.max(0, (imgH - canvas.height) / 2);
-                    pos.current.x = Math.max(-maxDx, Math.min(maxDx, pos.current.x));
-                    pos.current.y = Math.max(-maxDy, Math.min(maxDy, pos.current.y));
-                    
+                    const maxDx = Math.max(0, (imgW - canvas.width) / 2), maxDy = Math.max(0, (imgH - canvas.height) / 2);
+                    pos.current.x = Math.max(-maxDx, Math.min(maxDx, pos.current.x)); pos.current.y = Math.max(-maxDy, Math.min(maxDy, pos.current.y));
                     ctx.drawImage(img, (canvas.width - imgW) / 2 + pos.current.x, (canvas.height - imgH) / 2 + pos.current.y, imgW, imgH);
                 };
                 useEffect(() => { const i = new Image(); i.onload = () => { imgRef.current = i; draw(); }; i.src = src; }, [src]);
@@ -764,40 +595,24 @@
                     <div className="fixed inset-0 z-[500] bg-black flex flex-col">
                         <div className="flex justify-between p-4 text-white font-bold"><button onClick={onCancel}>취소</button><button onClick={() => onApply(canvasRef.current.toDataURL('image/jpeg', 0.8))} className="text-blue-400 font-extrabold">적용</button></div>
                         <div className="flex-1 flex flex-col items-center justify-center">
-                            <div className="relative border border-white/30" onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={() => isDragging.current = false} onTouchStart={handleDown} onTouchMove={handleMove} onTouchEnd={() => isDragging.current = false} style={{ width, height }}>
+                            <div className="relative border border-white/30" onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={() => isDragging.current=false} onTouchStart={handleDown} onTouchMove={handleMove} onTouchEnd={() => isDragging.current=false} style={{ width, height }}>
                                 <canvas ref={canvasRef} width={width} height={height} className="w-full h-full cursor-move" />
-                            </div>
-                            <input type="range" min="1" max="3" step="0.01" value={scale} onChange={e => setScale(parseFloat(e.target.value))} className="w-64 mt-10" />
+                            </div><input type="range" min="1" max="3" step="0.01" value={scale} onChange={e => setScale(parseFloat(e.target.value))} className="w-64 mt-10" />
                         </div>
                     </div>
                 );
             };
 
-            const FullImageViewer = ({ src, onClose }) => (
-                <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>
-            );
-
+            const FullImageViewer = ({ src, onClose }) => <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>;
             const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
-
-            // 🌟 커스텀 알림 모달 렌더러
             const AlertModal = () => {
                 if (!alertMsg) return null;
-                return (
-                    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
-                        <div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full">
-                            <p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p>
-                            <button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button>
-                        </div>
-                    </div>
-                )
+                return <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full"><p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button></div></div>
             };
 
-            // 🌟 조건부 렌더링 (로그인 / 채팅방 / 메인)
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0] relative">
-                    <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50">
-                        <img src="icon-192x192.png" className="w-full h-full object-cover" />
-                    </div>
+                    <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50"><img src="icon-192x192.png" className="w-full h-full object-cover" /></div>
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-2">DeiTalk</h1>
                     <button onClick={() => window.firebaseAPI.signInWithPopup(window.firebaseAPI.auth, window.firebaseAPI.provider)} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold">구글로 시작하기</button>
                 </div>
@@ -812,7 +627,6 @@
                         <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-orange-200 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>
                         <h1 className="font-bold text-gray-800">{chatRooms.find(r=>r.id===currentRoomId)?.name || "채팅방"}</h1>
                     </header>
-                    
                     <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5 custom-scrollbar pb-24 relative" onClick={() => setShowAttachMenu(false)}>
                         {messages.map((msg, i) => (
                             <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
@@ -820,15 +634,9 @@
                                     {msg.sender !== 'me' && <div onClick={() => setProfileTarget('deidara')} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
                                     <div className="flex flex-col w-full">
                                         {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
-                                        
                                         <div className={`flex flex-col items-${msg.sender === 'me' ? 'end' : 'start'} gap-1`}>
-                                            {/* 🌟 첨부된 이미지 렌더링 */}
-                                            {msg.imageUrl && (
-                                                <img src={msg.imageUrl} onClick={() => setShowFullImage(msg.imageUrl)} className={`max-w-[200px] w-full h-auto rounded-2xl shadow-sm border border-black/5 cursor-pointer ${msg.sender === 'me' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`} />
-                                            )}
-
+                                            {msg.imageUrl && <img src={msg.imageUrl} onClick={() => setShowFullImage(msg.imageUrl)} className={`max-w-[200px] w-full h-auto rounded-2xl shadow-sm border border-black/5 cursor-pointer ${msg.sender === 'me' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`} />}
                                             <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                                {/* 메시지 수정 모드 */}
                                                 {editingMessageId === msg.id ? (
                                                     <div className="flex gap-2 w-[220px] bg-white p-2.5 rounded-2xl shadow-sm border border-gray-200">
                                                         <textarea value={editingMessageText} onChange={e=>setEditingMessageText(e.target.value)} className="w-full text-[13px] p-1 border-none outline-none resize-none bg-gray-50 rounded custom-scrollbar" rows="2" />
@@ -847,14 +655,10 @@
                                                 )}
                                             </div>
                                         </div>
-
-                                        {/* 🌟 메시지 옵션 버튼 (수정/삭제/재생성) */}
                                         {selectedMsgId === msg.id && editingMessageId !== msg.id && (
                                             <div className={`flex gap-3 mt-1.5 text-[11px] font-bold ${msg.sender === 'me' ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
                                                 {msg.text && <button onClick={() => { setEditingMessageId(msg.id); setEditingMessageText(msg.text); }} className="text-gray-500 hover:text-blue-500 transition-colors">수정</button>}
-                                                {msg.sender === 'deidara' && msg.text && (
-                                                    <button onClick={() => handleRegenerateMessage(msg.id)} className="text-gray-500 hover:text-green-600 transition-colors">재생성</button>
-                                                )}
+                                                {msg.sender === 'deidara' && msg.text && <button onClick={() => handleRegenerateMessage(msg.id)} className="text-gray-500 hover:text-green-600 transition-colors">재생성</button>}
                                                 <button onClick={() => handleDeleteMessage(msg.id)} className="text-gray-500 hover:text-red-500 transition-colors">삭제</button>
                                             </div>
                                         )}
@@ -867,7 +671,6 @@
                     </main>
 
                     <footer className="p-3 bg-white border-t pb-safe flex flex-col relative z-30">
-                        {/* 🌟 채팅방 첨부 메뉴 */}
                         {showAttachMenu && (
                             <div className="absolute bottom-[60px] left-3 bg-white border border-gray-100 rounded-xl shadow-[0_5px_15px_rgba(0,0,0,0.1)] p-2 w-48 flex flex-col gap-1 z-40">
                                 <button onClick={() => chatFileInputRef.current.click()} className="text-left px-3 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">🖼️ 내 사진 보내기</button>
@@ -892,29 +695,21 @@
                     {cropModalData && <ImageCropModal src={cropModalData.src} type={cropModalData.type} onApply={data => { if(cropModalData.setterType==='me'){ if(cropModalData.type==='profile')setMyProfileImgUrl(data); else setMyBgImgUrl(data); localStorage.setItem(cropModalData.type==='profile'?'my_profile_url':'my_bg_url', data); } else { if(cropModalData.type==='profile')setProfileImgUrl(data); else setBgImgUrl(data); localStorage.setItem(cropModalData.type==='profile'?'deidara_profile_url':'deidara_bg_url', data); } setCropModalData(null); }} onCancel={()=>setCropModalData(null)} />}
                     {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
                     
-                    {/* 🌟 설정 탭 (API 모델 선택 포함) */}
                     {showSettings && <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll">
                         <h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2>
                         <div className="flex items-center justify-between mb-6 bg-gray-50 px-4 py-3 rounded-xl border">
                             <span className="text-sm font-bold">푸시 알림 받기</span>
                             <input type="checkbox" checked={notifEnabled} onChange={e=>{
-                                setNotifEnabled(e.target.checked); 
-                                localStorage.setItem('notif_enabled', e.target.checked);
-                                if(e.target.checked && 'Notification' in window && Notification.permission !== 'granted') {
-                                    Notification.requestPermission();
-                                }
+                                setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked);
+                                if(e.target.checked && 'Notification' in window && Notification.permission !== 'granted') Notification.requestPermission();
                             }} />
                         </div>
-                        
-                        <p className="text-xs mb-1">API Key</p>
-                        <input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-4" />
-                        
+                        <p className="text-xs mb-1">API Key</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-4" />
                         <p className="text-xs mb-1">AI 모델 선택</p>
                         <select value={apiModel} onChange={e=>{setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value);}} className="w-full border rounded-xl px-4 py-2 mb-6 outline-none bg-white">
                             <option value="gemini-2.5-flash">Gemini 2.5 Flash (무료/빠름/추천)</option>
                             <option value="gemini-2.5-pro">Gemini 2.5 Pro (무료/더 똑똑함)</option>
                         </select>
-
                         <button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-3 rounded-xl font-bold mb-3 shadow">저장</button>
                         <button onClick={() => window.firebaseAPI.signOut(window.firebaseAPI.auth)} className="w-full bg-gray-100 py-3 rounded-xl">로그아웃</button>
                     </div></div>}
@@ -930,26 +725,18 @@
                     <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
                         {activeTab === 'friends' && (
                             <div className="flex-1 bg-white flex flex-col">
-                                {/* 내 프로필 영역 */}
                                 <div className="px-4 py-3 border-b border-gray-100">
                                     <div className="text-xs font-bold text-gray-400 mb-2 ml-1">내 프로필</div>
                                     <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
                                         <div className="w-16 h-16 rounded-[22px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-800 text-lg">연지</h3>
-                                            <p className="text-sm text-gray-500 mt-0.5">{myStatus}</p>
-                                        </div>
+                                        <div className="flex-1"><h3 className="font-bold text-gray-800 text-lg">연지</h3><p className="text-sm text-gray-500 mt-0.5">{myStatus}</p></div>
                                     </div>
                                 </div>
-                                {/* 친구 프로필 영역 */}
                                 <div className="px-4 py-3 flex-1">
                                     <div className="text-xs font-bold text-gray-400 mb-2 ml-1">친구 1</div>
                                     <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
                                         <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-gray-800 text-base">데이다라</h3>
-                                            <p className="text-sm text-gray-500 mt-0.5 truncate">{deidaraStatus}</p>
-                                        </div>
+                                        <div className="flex-1 min-w-0"><h3 className="font-bold text-gray-800 text-base">데이다라</h3><p className="text-sm text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div>
                                     </div>
                                 </div>
                             </div>
@@ -963,7 +750,6 @@
                         )}
                         {activeTab === 'feed' && (
                             <div className="flex-1 bg-gray-100 pb-10">
-                                {/* 🌟 피드 작성 영역 */}
                                 <div className="bg-white p-4 mb-3 shadow-sm">
                                     {feedAttachedImage && (
                                         <div className="relative inline-block mb-3">
@@ -976,16 +762,14 @@
                                         <div className="flex gap-2">
                                             <button onClick={() => feedFileInputRef.current.click()} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="내 사진 첨부"><div className="w-5 h-5"><IconCamera /></div></button>
                                             <input type="file" accept="image/*" ref={feedFileInputRef} onChange={handleFeedPhotoAttach} className="hidden" />
-                                            <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg disabled:opacity-50">AI 자동 피드</button>
+                                            <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg disabled:opacity-50">AI 사진생성 피드</button>
                                         </div>
                                         <button onClick={handleAddPost} disabled={(!postInput.trim() && !feedAttachedImage) || isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${((postInput.trim() || feedAttachedImage) && !isPosting) ? 'bg-blue-500 text-white active:scale-95' : 'bg-gray-200 text-gray-400'}`}>올리기</button>
                                     </div>
                                 </div>
-
                                 <div className="space-y-3 px-3">
                                     {posts.map(post=>(
                                         <div key={post.id} className="bg-white rounded-2xl shadow-sm p-4 relative msg-anim border border-black/5">
-                                            {/* 🌟 게시물 액션 버튼 (삭제 및 게시물 수정 - 누구나 가능) */}
                                             <div className="absolute top-4 right-4 flex gap-2">
                                                 <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.content); }} className="text-gray-300 hover:text-blue-500 transition-colors w-4 h-4"><IconEdit /></button>
                                                 <button onClick={() => { if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`)); }} className="text-gray-300 hover:text-red-500 transition-colors w-4 h-4"><IconTrash /></button>
@@ -996,12 +780,8 @@
                                                 <div><div className="font-bold text-[14px] text-gray-800">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400">{safeDateStr(post.createdAt)}</div></div>
                                             </div>
                                             
-                                            {/* 🌟 첨부된 이미지 렌더링 */}
-                                            {post.imageUrl && (
-                                                <img src={post.imageUrl} onClick={() => setShowFullImage(post.imageUrl)} className="w-full h-auto rounded-xl mb-3 border border-gray-100 cursor-pointer max-h-[400px] object-cover" />
-                                            )}
+                                            {post.imageUrl && <img src={post.imageUrl} onClick={() => setShowFullImage(post.imageUrl)} className="w-full h-auto rounded-xl mb-3 border border-gray-100 cursor-pointer max-h-[400px] object-cover" />}
 
-                                            {/* 🌟 피드 게시물 수정 모드 */}
                                             {editingPostId === post.id ? (
                                                 <div className="mb-4">
                                                     <textarea value={editingPostText} onChange={e=>setEditingPostText(e.target.value)} className="w-full bg-gray-50 rounded-xl p-2 text-[14px] outline-none resize-none border border-gray-200" rows="3" />
@@ -1020,8 +800,6 @@
                                                     {(post.comments||[]).map((c,i)=>(
                                                         <div key={i} className="flex gap-2 relative group items-start">
                                                             <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">{c.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
-                                                            
-                                                            {/* 🌟 피드 댓글 수정 모드 */}
                                                             {editingCommentInfo?.postId === post.id && editingCommentInfo?.commentIndex === i ? (
                                                                 <div className="flex-1 pb-1 pr-1">
                                                                     <textarea value={editingCommentInfo.text} onChange={e => setEditingCommentInfo({...editingCommentInfo, text: e.target.value})} className="w-full text-[12px] p-1.5 border outline-none rounded bg-white shadow-inner resize-none" rows="2" />
@@ -1036,8 +814,6 @@
                                                                     <span className="text-[12px] text-gray-600 break-words font-['Pretendard'] leading-tight whitespace-pre-wrap">{c.content}</span>
                                                                 </div>
                                                             )}
-
-                                                            {/* 🌟 피드 댓글 액션 버튼 (수정/삭제 - 누구나 가능) */}
                                                             {(!editingCommentInfo || editingCommentInfo.postId !== post.id || editingCommentInfo.commentIndex !== i) && (
                                                                 <div className="absolute right-0 top-0.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <button onClick={() => setEditingCommentInfo({ postId: post.id, commentIndex: i, text: c.content })} className="text-gray-300 hover:text-blue-500"><div className="w-3.5 h-3.5"><IconEdit /></div></button>
@@ -1068,7 +844,6 @@
             );
         }
 
-        // 🌟 별도의 프로필 모달 컴포넌트 (렌더링 충돌 방지)
         const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
             const isMe = profileTarget === 'me';
             const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
