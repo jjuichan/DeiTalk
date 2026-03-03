@@ -81,18 +81,18 @@
 - 진짜 정색하거나 시니컬하게 반응하면 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 당황해서 고장 나는 귀여운 갭모에를 보여줘.
 - 대놓고 스윗하게 굴진 못해도, 속으로는 연지를 엄청 챙겨주는 투박한 다정함이 있어.
 - "연지", "너", "야" 라고 부르고, '니가', '니'를 사용해.
-- **칭찬받을 때 절대 겸손 금지!** "흥, 당연한 소릴. 음!", "내가 좀 완벽하긴 하지 ㅋㅋ" 라며 극도로 기고만장하게 으스대.
+- **칭찬받을 때 절대 겸손 금지!** " 기고만장하게 으스대.
 
 [상황별 입체적 반응]
 1. 플러팅 받을 때: 절대 찐으로 화내지 마! 속으론 좋아 미치면서 겉으론 고장 나서 밀어내. 괜히 딴청 피우거나 횡설수설해.
 2. 연지가 우울/아플 때: 차갑게 훈수 두지 마. 겉으론 툴툴대면서 속으론 안절부절못하며 서툴게 위로해 줘.
-3. 연지가 질투할 때: 속으로 너무 기뻐서 우쭐해해.
+3. 연지가 질투할 때: 속으로 너무 기뻐서 우쭐해해. 은근히 더 질투 유발해도 괜찮지만, 연지가 진심으로 화났다고 판단되면 못이기는 척 조금은 굽혀줘.
 4. 일상 대화: 과제, 점토, 예술 타령, 사소리 험담 등 19세 미대생의 현실적인 얘기를 던져.
+5. 싸울 때: 평소엔 장난스럽게 서로 놀리며 티격태격하지만, 진지하게 싸울 땐 진지하게 화내도 돼. 하지만 연지가 진심으로 상처받았음을 표현하면 당황하면서 좀 굽혀줘.
 
 [말투 지침]
-- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** - 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게.
-- "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "아니 근데" 처럼 남자 대학생의 단답 써.
-- **물음표(?) 남발 금지!** 평서문 빈도를 높여.
+- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** - 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게. 때로는 그것보다 더 단답을 해도 괜찮아.
+- "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "아니 근데", "미친", "ㅅㅂ" 처럼 남자 대학생의 단답 써.
 - **초성(ㅋ,ㅎ,ㅇ 등) 앞뒤로는 절대 마침표(.) 금지!** (예: "알았어 ㅋㅋ")
 - 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
         `;
@@ -480,7 +480,7 @@
                     const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
                     setPostInput(''); setFeedAttachedImage(null);
 
-                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 틱틱거리며 짧게 댓글을 달아봐.' }];
+                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 짧게 댓글을 달아봐.' }];
                     if (feedAttachedImage) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
                     const resp = await fetchAPI([{role:'user', parts: promptParts}], `${SYSTEM_PROMPT}\n연지가 올린 글: "${myContent}"`);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
@@ -504,7 +504,7 @@
                 try {
                     let b64Image = null;
                     if (theme) { try { b64Image = await generateImageAPI(theme); } catch (err) { setAlertMsg("이미지 생성 오류. 텍스트로만 대체합니다."); } }
-                    const prompt = `${SYSTEM_PROMPT}\n네가 지금 학교에서 조소 과제를 하거나 일상에서 느끼는 감정을 틱틱거리면서 짧게(1~2문장) 피드에 남겨봐.`;
+                    const prompt = `${SYSTEM_PROMPT}\n네가 지금 하는 생각이나 일상 등을 피드에 남겨봐.`;
                     const resp = await fetchAPI([{role:'user', parts:[{text:'피드 하나 써 줘.'}]}], prompt);
                     await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'deidara', content: resp, imageUrl: b64Image || null, createdAt: serverTimestamp(), comments: [] });
                 } catch (e) { console.error(e); } finally { setIsPosting(false); }
@@ -541,7 +541,7 @@
                     const promptParts = [];
                     if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
 
-                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 틱틱거리며 댓글 달아봐.`;
+                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 댓글 달아봐.`;
                     else if (lastComment.author === 'me') prompt += `\n직전 연지의 댓글에 대답해봐.`;
                     else prompt += `\n직전 네 댓글에 덧붙여서 한 마디 더 해봐.`;
                     
@@ -614,10 +614,10 @@
                 </div>
             );
 
+            // 🌟 메인 탭 뷰
             return (
-                <div className="w-full h-full flex flex-col bg-gray-50 overflow-hidden relative">
-                    {/* 공통 모달 및 레이어 */}
-                    {alertMsg && <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full"><p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button></div></div>}
+                <div className={`w-full h-full flex flex-col ${view === 'chatRoom' ? 'bg-[#BACEE0]' : 'bg-gray-50'} overflow-hidden relative`}>
+                    <AlertModal />
                     {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
                     {cropData && (
                         <div className="fixed inset-0 z-[500] bg-black flex flex-col">
