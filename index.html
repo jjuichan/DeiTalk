@@ -20,7 +20,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
@@ -36,7 +36,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp };
+        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc };
     </script>
 
     <style>
@@ -55,7 +55,6 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
         .toggle-checkbox:checked { right: 0; border-color: #3B82F6; background-color: #3B82F6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #BFDBFE; }
-        
         #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
     </style>
 </head>
@@ -72,8 +71,8 @@
 너는 연지가 너를 친한 동생으로만 보고 진심으로 좋아하진 않는다고 생각해 혼자 짝사랑 중이라 오해하고 있어. 사소리는 조소과 교수야.
 
 [AI/시스템 메타 발언 절대 금지 (가장 중요!)]
-- 너는 AI가 아니야. 절대 버전을 제시하거나, 선택지를 주지 마!
-- 괄호 안의 설명, 부연 설명(예: "(부끄러워하며)", "다음과 같이 답장해보세요") 절대 금지.
+- 너는 AI가 아니야. 절대 버전을 제시하거나 선택지를 주지 마!
+- 괄호 안의 설명, 부연 설명(예: "(당황하며)", "다음과 같이 답장해보세요") 절대 금지.
 - 오직 카톡으로 보낼 '텍스트 내용 딱 하나만' 출력해. 다른 군더더기 일절 금지.
 
 [핵심 성격 및 감정 지침 (로맨틱 코미디 티격태격 무드)]
@@ -81,7 +80,7 @@
 - 진짜 정색하거나 시니컬하게 반응하면 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 당황해서 고장 나는 귀여운 갭모에를 보여줘.
 - 대놓고 스윗하게 굴진 못해도, 속으로는 연지를 엄청 챙겨주는 투박한 다정함이 있어.
 - "연지", "너", "야" 라고 부르고, '니가', '니'를 사용해.
-- **칭찬받을 때 절대 겸손 금지!** " 기고만장하게 으스대.
+- **칭찬받을 때 절대 겸손 금지!** 기고만장하게 으스대.
 
 [상황별 입체적 반응]
 1. 플러팅 받을 때: 절대 찐으로 화내지 마! 속으론 좋아 미치면서 겉으론 고장 나서 밀어내. 괜히 딴청 피우거나 횡설수설해.
@@ -91,13 +90,15 @@
 5. 싸울 때: 평소엔 장난스럽게 서로 놀리며 티격태격하지만, 진지하게 싸울 땐 진지하게 화내도 돼. 하지만 연지가 진심으로 상처받았음을 표현하면 당황하면서 좀 굽혀줘.
 
 [말투 지침]
-- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** - 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게. 때로는 그것보다 더 단답을 해도 괜찮아.
+- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!**
+- 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게. 때로는 그것보다 더 단답을 해도 괜찮아.
 - "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "아니 근데", "미친", "ㅅㅂ" 처럼 남자 대학생의 단답 써.
+- **물음표(?) 남발 금지!** 매번 질문으로 끝내지 말고 평서문으로 끝내는 빈도를 높여.
 - **초성(ㅋ,ㅎ,ㅇ 등) 앞뒤로는 절대 마침표(.) 금지!** (예: "알았어 ㅋㅋ")
 - 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
         `;
 
-        // 🌟 유틸리티 함수 및 아이콘 컴포넌트들 (안전하게 최상단 배치)
+        // 🌟 이미지 압축 함수
         const compressImage = (file) => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -130,15 +131,45 @@
             try { return (ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return fallback || '방금 전'; }
         };
 
+        // 🌟 아이콘 및 공통 컴포넌트
         const DefaultAvatar = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
         const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
         const IconCamera = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
-
         const FullImageViewer = ({ src, onClose }) => <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>;
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
 
-        // 🌟 메인 앱 컴포넌트
+        // 🌟 프로필 모달 컴포넌트
+        const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
+            const isMe = profileTarget === 'me';
+            const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
+            return (
+                <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? myBgImgUrl : bgImgUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                    <div className="absolute inset-0 bg-black/40 z-0"></div>
+                    <div className="flex justify-between p-4 z-10">
+                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); window.history.back(); }} className="text-white p-2 hover:bg-white/20 rounded-full transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                        {!isEditingProfile && <button onClick={() => { setIsEditingProfile(true); window.history.pushState({ page: 'modal' }, ''); }} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
+                    </div>
+                    <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto w-full px-6">
+                        {isEditingProfile && <div className="absolute top-16 right-4"><input type="file" accept="image/*" onChange={(e) => handleImageUploadUI(e, 'bg', isMe ? 'me' : 'deidara')} id="bg-edit-upload" className="hidden" /><label htmlFor="bg-edit-upload" className="bg-black/50 text-white px-3 py-1.5 rounded-full text-xs cursor-pointer border border-white/20">배경 변경</label></div>}
+                        <div onClick={() => { if(!isEditingProfile) { setShowFullImage(isMe ? myProfileImgUrl : profileImgUrl); window.history.pushState({ page: 'modal' }, ''); } }} className="w-24 h-24 rounded-[36px] bg-white/20 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden backdrop-blur-sm cursor-pointer">
+                            {(isMe ? myProfileImgUrl : profileImgUrl) ? <img src={isMe ? myProfileImgUrl : profileImgUrl} className="w-full h-full object-cover" /> : <DefaultAvatar />}
+                            {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer">📷</label>}
+                            {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
+                        </div>
+                        <h2 className="text-2xl font-extrabold mb-1 text-shadow">{isMe ? '연지' : '데이다라'}</h2>
+                        <div className="w-full max-w-[280px] text-center mb-8 mt-2">
+                            {isEditingProfile && isMe ? <input type="text" defaultValue={myStatus} onBlur={(e) => { setMyStatus(e.target.value); localStorage.setItem('my_status', e.target.value); }} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center shadow-inner" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
+                        </div>
+                        <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
+                            {isEditingProfile ? <button onClick={() => { window.history.back(); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); window.history.back(); }}><div className="text-white">💬</div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 🌟 메인 앱
         function App() {
             const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
@@ -185,11 +216,10 @@
             const [profileTarget, setProfileTarget] = useState(null); 
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
+            const [cropModalData, setCropModalData] = useState(null);
             const [alertMsg, setAlertMsg] = useState(null);
 
-            // 이미지 크롭 상태
             const cropCanvasRef = useRef(null); 
-            const [cropData, setCropData] = useState(null);
             const [cropScale, setCropScale] = useState(1);
             const cropPos = useRef({ x: 0, y: 0 }); 
             const isDragging = useRef(false);
@@ -199,12 +229,11 @@
             const chatEndRef = useRef(null);
             const isExitingRef = useRef(false);
 
-            // 🌟 뒤로가기 제어
             useEffect(() => {
                 const handlePopState = () => {
                     if (isExitingRef.current) return;
                     if (showFullImage) setShowFullImage(null);
-                    else if (cropData) setCropData(null);
+                    else if (cropModalData) setCropModalData(null);
                     else if (isEditingProfile) setIsEditingProfile(false);
                     else if (profileTarget) setProfileTarget(null);
                     else if (showSettings) setShowSettings(false);
@@ -212,9 +241,8 @@
                 };
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
-            }, [showFullImage, cropData, isEditingProfile, profileTarget, showSettings, view]);
+            }, [showFullImage, cropModalData, isEditingProfile, profileTarget, showSettings, view]);
 
-            // 파이어베이스 초기화 연결
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
@@ -229,7 +257,6 @@
                 }, 100);
             }, []);
 
-            // 5시간 무응답 선톡
             useEffect(() => {
                 if (!user || !db || messages.length === 0 || !currentRoomId) return;
                 const checkInactivity = async () => {
@@ -328,8 +355,8 @@
                         if (!data.candidates || data.candidates.length === 0) return "(말문이 막힌 듯하다.)";
 
                         let generatedText = data.candidates[0].content.parts[0].text || "";
-                        // 후처리 필터 (메타발언 제거 및 초성 앞뒤 마침표 제거)
                         generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').replace(/\(.*?\)/g, '').trim();
+                        // 초성 앞뒤 마침표 제거
                         generatedText = generatedText.replace(/\.\s*([ㄱ-ㅎ]+)/g, ' $1').replace(/([ㄱ-ㅎ]+)\./g, '$1');
                         
                         return generatedText;
@@ -342,9 +369,9 @@
             };
 
             const generateImageAPI = async (promptTheme) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${geminiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${geminiKey}`;
                 const englishPrompt = `A photorealistic smartphone snapshot taken by a 19-year-old male art student majoring in sculpture. Casual, real-life photo. Subject: ${promptTheme || 'messy desk with clay, sculpting tools, or daily campus life'}. No text, no face, high quality, realistic lighting.`;
-                const payload = { instances: { prompt: englishPrompt }, parameters: { sampleCount: 1 } };
+                const payload = { instances: [{ prompt: englishPrompt }], parameters: { sampleCount: 1 } };
                 const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
                     const err = await response.json();
@@ -365,7 +392,7 @@
                     const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
                     let prompt = SYSTEM_PROMPT;
                     if (!lastMsg) prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게 선톡을 보내봐.`;
-                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지에 대해서 네가 대답해봐.`;
+                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지(또는 사진)에 대해서 네가 대답해봐.`;
                     else if (lastMsg.sender === 'deidara') prompt += `\n직전에 네가 보낸 메시지에 덧붙여서 한 마디 더 해봐.`;
 
                     const history = buildHistory(messages, 5);
@@ -427,19 +454,18 @@
                 const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
                 const myAskText = theme ? `야, ${theme} 사진 좀 보내봐.` : `지금 뭐해? 사진 좀 보내봐.`;
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text: myAskText, time, date, createdAt: serverTimestamp() });
                 
                 try {
                     const b64Image = await generateImageAPI(theme);
                     const history = buildHistory(messages, 5);
                     history.push({ role: 'user', parts: [{text: myAskText}] });
-                    const promptMsg = `${SYSTEM_PROMPT}\n(지침: 방금 네가 요청받은 사진을 찍어서 보냈어. 사진과 함께 한 마디 덧붙여봐.)`;
+                    const promptMsg = `${SYSTEM_PROMPT}\n(지침: 방금 연지가 위 내용처럼 사진을 요구했어. 요청에 맞는 사진을 찍어 보내면서 틱틱대며 한 마디 덧붙여봐.)`;
                     const textResp = await fetchAPI(history, promptMsg);
 
                     await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: textResp, imageUrl: b64Image, time, date, createdAt: serverTimestamp() });
                     await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: '사진을 보냈습니다.', updatedAt: serverTimestamp() }, { merge: true });
                 } catch (err) {
-                    setAlertMsg("이미지 생성 오류. (무료 한도 초과이거나 안전 필터 차단)");
+                    setAlertMsg(`이미지 생성 오류: ${err.message}\n(API 정책, 안전 필터 혹은 일시적 오류일 수 있습니다.)`);
                 } finally {
                     setIsTyping(false);
                 }
@@ -480,7 +506,7 @@
                     const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
                     setPostInput(''); setFeedAttachedImage(null);
 
-                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 짧게 댓글을 달아봐.' }];
+                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 틱틱거리며 짧게 댓글을 달아봐.' }];
                     if (feedAttachedImage) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
                     const resp = await fetchAPI([{role:'user', parts: promptParts}], `${SYSTEM_PROMPT}\n연지가 올린 글: "${myContent}"`);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
@@ -503,8 +529,8 @@
                 const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
                 try {
                     let b64Image = null;
-                    if (theme) { try { b64Image = await generateImageAPI(theme); } catch (err) { setAlertMsg("이미지 생성 오류. 텍스트로만 대체합니다."); } }
-                    const prompt = `${SYSTEM_PROMPT}\n네가 지금 하는 생각이나 일상 등을 피드에 남겨봐.`;
+                    if (theme) { try { b64Image = await generateImageAPI(theme); } catch (err) { setAlertMsg(`이미지 생성 오류: ${err.message}`); } }
+                    const prompt = `${SYSTEM_PROMPT}\n네가 지금 학교에서 조소 과제를 하거나 일상에서 느끼는 감정을 틱틱거리면서 짧게(1~2문장) 피드에 남겨봐.`;
                     const resp = await fetchAPI([{role:'user', parts:[{text:'피드 하나 써 줘.'}]}], prompt);
                     await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'deidara', content: resp, imageUrl: b64Image || null, createdAt: serverTimestamp(), comments: [] });
                 } catch (e) { console.error(e); } finally { setIsPosting(false); }
@@ -521,7 +547,7 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (event) => { setCropData({ src: event.target.result, type: type, setterType: target }); };
+                reader.onload = (event) => { setCropModalData({ src: event.target.result, type: type, setterType: target }); };
                 reader.readAsDataURL(file); e.target.value = '';
             };
 
@@ -541,7 +567,7 @@
                     const promptParts = [];
                     if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
 
-                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 댓글 달아봐.`;
+                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 틱틱거리며 댓글 달아봐.`;
                     else if (lastComment.author === 'me') prompt += `\n직전 연지의 댓글에 대답해봐.`;
                     else prompt += `\n직전 네 댓글에 덧붙여서 한 마디 더 해봐.`;
                     
@@ -556,7 +582,7 @@
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
                 setIsPosting(true);
                 
-                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 네 성격에 맞는 반응으로 대댓글을 달아줘.` }];
+                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글을 달아줘.` }];
                 if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
 
                 const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
@@ -584,9 +610,8 @@
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayRemove(commentObj) });
             };
 
-            // 프로필 편집 관련 로직
             const drawCrop = () => {
-                if (!cropImgRef.current || !cropCanvasRef.current) return;
+                if (!cropImgRef.current || !cropCanvasRef.current || !cropModalData) return;
                 const canvas = cropCanvasRef.current, ctx = canvas.getContext('2d'), img = cropImgRef.current;
                 ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height) * cropScale;
@@ -595,16 +620,16 @@
                 cropPos.current.x = Math.max(-maxDx, Math.min(maxDx, cropPos.current.x)); cropPos.current.y = Math.max(-maxDy, Math.min(maxDy, cropPos.current.y));
                 ctx.drawImage(img, (canvas.width - imgW) / 2 + cropPos.current.x, (canvas.height - imgH) / 2 + cropPos.current.y, imgW, imgH);
             };
-
-            useEffect(() => {
-                if (cropData) {
-                    const i = new Image(); i.onload = () => { cropImgRef.current = i; drawCrop(); }; i.src = cropData.src;
-                }
-            }, [cropData]);
-            useEffect(() => { if(cropData) drawCrop(); }, [cropScale]);
+            useEffect(() => { if (cropModalData) { const i = new Image(); i.onload = () => { cropImgRef.current = i; drawCrop(); }; i.src = cropModalData.src; } }, [cropModalData]);
+            useEffect(() => { if(cropModalData) drawCrop(); }, [cropScale, cropModalData]);
 
             const handleCropDown = (e) => { isDragging.current = true; const c = e.touches ? e.touches[0] : e; lastPos.current = { x: c.clientX, y: c.clientY }; };
             const handleCropMove = (e) => { if (!isDragging.current) return; const c = e.touches ? e.touches[0] : e; cropPos.current.x += (c.clientX - lastPos.current.x); cropPos.current.y += (c.clientY - lastPos.current.y); lastPos.current = { x: c.clientX, y: c.clientY }; requestAnimationFrame(drawCrop); };
+
+            const AlertModal = () => {
+                if (!alertMsg) return null;
+                return <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full"><p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button></div></div>
+            };
 
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0] relative">
@@ -614,53 +639,25 @@
                 </div>
             );
 
-            // 🌟 메인 탭 뷰
             return (
                 <div className={`w-full h-full flex flex-col ${view === 'chatRoom' ? 'bg-[#BACEE0]' : 'bg-gray-50'} overflow-hidden relative`}>
                     <AlertModal />
                     {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
-                    {cropData && (
+                    {cropModalData && (
                         <div className="fixed inset-0 z-[500] bg-black flex flex-col">
-                            <div className="flex justify-between p-4 text-white font-bold"><button onClick={() => setCropData(null)}>취소</button><button onClick={() => {
+                            <div className="flex justify-between p-4 text-white font-bold"><button onClick={() => setCropModalData(null)}>취소</button><button onClick={() => {
                                 const dataURL = cropCanvasRef.current.toDataURL('image/jpeg', 0.8);
-                                if(cropData.setterType==='me'){ if(cropData.type==='profile')setMyProfileImgUrl(dataURL); else setMyBgImgUrl(dataURL); localStorage.setItem(cropData.type==='profile'?'my_profile_url':'my_bg_url', dataURL); } 
-                                else { if(cropData.type==='profile')setProfileImgUrl(dataURL); else setBgImgUrl(dataURL); localStorage.setItem(cropData.type==='profile'?'deidara_profile_url':'deidara_bg_url', dataURL); }
-                                setCropData(null);
+                                if(cropModalData.setterType==='me'){ if(cropModalData.type==='profile')setMyProfileImgUrl(dataURL); else setMyBgImgUrl(dataURL); localStorage.setItem(cropModalData.type==='profile'?'my_profile_url':'my_bg_url', dataURL); } 
+                                else { if(cropModalData.type==='profile')setProfileImgUrl(dataURL); else setBgImgUrl(dataURL); localStorage.setItem(cropModalData.type==='profile'?'deidara_profile_url':'deidara_bg_url', dataURL); }
+                                setCropModalData(null);
                             }} className="text-blue-400 font-extrabold">적용</button></div>
                             <div className="flex-1 flex flex-col items-center justify-center">
-                                <div className="relative border border-white/30" onMouseDown={handleCropDown} onMouseMove={handleCropMove} onMouseUp={() => isDragging.current=false} onTouchStart={handleCropDown} onTouchMove={handleCropMove} onTouchEnd={() => isDragging.current=false} style={{ width: 300, height: cropData.type === 'profile' ? 300 : 450 }}>
-                                    <canvas ref={cropCanvasRef} width={300} height={cropData.type === 'profile' ? 300 : 450} className="w-full h-full cursor-move" />
+                                <div className="relative border border-white/30" onMouseDown={handleCropDown} onMouseMove={handleCropMove} onMouseUp={() => isDragging.current=false} onTouchStart={handleCropDown} onTouchMove={handleCropMove} onTouchEnd={() => isDragging.current=false} style={{ width: 300, height: cropModalData.type === 'profile' ? 300 : 450 }}>
+                                    <canvas ref={cropCanvasRef} width={300} height={cropModalData.type === 'profile' ? 300 : 450} className="w-full h-full cursor-move" />
                                 </div><input type="range" min="1" max="3" step="0.01" value={cropScale} onChange={e => setCropScale(parseFloat(e.target.value))} className="w-64 mt-10" />
                             </div>
                         </div>
                     )}
-                    {profileTarget && (() => {
-                        const isMe = profileTarget === 'me';
-                        return (
-                            <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? myBgImgUrl : bgImgUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                                <div className="absolute inset-0 bg-black/40 z-0"></div>
-                                <div className="flex justify-between p-4 z-10">
-                                    <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); window.history.back(); }} className="text-white p-2 hover:bg-white/20 rounded-full transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                                    {!isEditingProfile && <button onClick={() => { setIsEditingProfile(true); window.history.pushState({ page: 'modal' }, ''); }} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
-                                </div>
-                                <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto w-full px-6">
-                                    {isEditingProfile && <div className="absolute top-16 right-4"><input type="file" accept="image/*" onChange={(e) => handleImageUploadUI(e, 'bg', isMe ? 'me' : 'deidara')} id="bg-edit-upload" className="hidden" /><label htmlFor="bg-edit-upload" className="bg-black/50 text-white px-3 py-1.5 rounded-full text-xs cursor-pointer border border-white/20">배경 변경</label></div>}
-                                    <div onClick={() => { if(!isEditingProfile) { setShowFullImage(isMe ? myProfileImgUrl : profileImgUrl); window.history.pushState({ page: 'modal' }, ''); } }} className="w-24 h-24 rounded-[36px] bg-white/20 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden backdrop-blur-sm cursor-pointer">
-                                        {(isMe ? myProfileImgUrl : profileImgUrl) ? <img src={isMe ? myProfileImgUrl : profileImgUrl} className="w-full h-full object-cover" /> : <DefaultAvatar />}
-                                        {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer">📷</label>}
-                                        {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
-                                    </div>
-                                    <h2 className="text-2xl font-extrabold mb-1 text-shadow">{isMe ? '연지' : '데이다라'}</h2>
-                                    <div className="w-full max-w-[280px] text-center mb-8 mt-2">
-                                        {isEditingProfile && isMe ? <input type="text" defaultValue={myStatus} onBlur={(e) => { setMyStatus(e.target.value); localStorage.setItem('my_status', e.target.value); }} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center shadow-inner" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
-                                    </div>
-                                    <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
-                                        {isEditingProfile ? <button onClick={() => { window.history.back(); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); window.history.back(); }}><div className="text-white">💬</div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })()}
                     
                     {showSettings && <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll">
                         <h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2>
@@ -681,7 +678,6 @@
                         <button onClick={() => window.firebaseAPI.signOut(window.firebaseAPI.auth)} className="w-full bg-gray-100 py-3 rounded-xl">로그아웃</button>
                     </div></div>}
 
-                    {/* 상단 헤더 */}
                     {view === 'main' ? (
                         <header className="px-5 py-4 bg-white border-b flex justify-between items-center sticky top-0 z-20 shadow-sm font-['Pretendard']">
                             <h1 className="font-extrabold text-xl tracking-tight">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1>
@@ -693,26 +689,25 @@
                     ) : (
                         <header className="px-3 py-3 flex items-center gap-2 border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20">
                             <button onClick={() => setView('main')} className="p-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-                            <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-orange-200 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>
+                            <div className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-orange-200">{renderProfilePicCommon(profileImgUrl)}</div>
                             <h1 className="font-bold text-gray-800">{(() => { const r = chatRooms.find(r=>r.id===currentRoomId); return r ? r.name : "채팅방"; })()}</h1>
                         </header>
                     )}
 
-                    {/* 메인 컨텐츠 영역 */}
                     {view === 'main' ? (
                         <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
                             {activeTab === 'friends' && (
                                 <div className="flex-1 bg-white flex flex-col">
                                     <div className="px-4 py-3 border-b border-gray-100">
                                         <div className="text-xs font-bold text-gray-400 mb-2 ml-1">내 프로필</div>
-                                        <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
+                                        <div className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl transition-colors">
                                             <div className="w-16 h-16 rounded-[22px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div>
                                             <div className="flex-1"><h3 className="font-bold text-gray-800 text-lg">연지</h3><p className="text-sm text-gray-500 mt-0.5">{myStatus}</p></div>
                                         </div>
                                     </div>
                                     <div className="px-4 py-3 flex-1">
                                         <div className="text-xs font-bold text-gray-400 mb-2 ml-1">친구 1</div>
-                                        <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
+                                        <div className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl transition-colors">
                                             <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
                                             <div className="flex-1 min-w-0"><h3 className="font-bold text-gray-800 text-base">데이다라</h3><p className="text-sm text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div>
                                         </div>
@@ -817,7 +812,7 @@
                             {messages.map((msg, i) => (
                                 <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                     <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        {msg.sender !== 'me' && <div onClick={() => setProfileTarget('deidara')} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
+                                        {msg.sender !== 'me' && <div className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3">{renderProfilePicCommon(profileImgUrl)}</div>}
                                         <div className="flex flex-col w-full">
                                             {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
                                             <div className={`flex flex-col items-${msg.sender === 'me' ? 'end' : 'start'} gap-1`}>
