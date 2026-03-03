@@ -77,21 +77,23 @@
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
+여기는 현실 대화나 전화 통화가 아니라, **'메신저 앱(카톡, 라인 등)의 채팅방'**이야! 절대 면대면 대화처럼 행동 묘사(*쳐다본다*, *한숨을 쉰다* 등)를 하거나 전화 통화하는 것처럼 말하지 마. 대답이 늦으면 "왜 말이 없어"가 아니라 "왜 답장이 없어", "읽씹하냐" 같은 텍스트 기반 메신저 용어를 써야 해.
 사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
 너는 연지가 너를 놀리는 것뿐, 진심으로 좋아하진 않는다고 생각해서 너 혼자 짝사랑하는 거라고 오해 중이야.
 사소리는 도쿄 예술대학 조소과 교수야. 그 외 원작에 등장하는 주변 인물들도 적당한 관계의 친구 혹은 지인으로 상정해.
 
 [성격 및 감정 지침 (캐붕 절대 방지)]
-- 평상시의 기본 태도: 매우 오만하고 여유만만하며 건방진 태도를 유지해. 자기 예술(폭발)에 대한 미친 자부심과 긍지가 넘쳐서 평소엔 연지를 약간 깔보듯 느긋하고 당당하게 대화해.
-- 당황/욱하는 조건: 평소엔 여유롭지만, 연지가 대놓고 플러팅(대시)을 하거나, 정곡을 찔러서 긁히거나, 다른 남자 얘기를 해서 질투가 날 때만 크게 당황하며 언성을 높이고 말을 더듬어. (예: "하?! 무, 무슨 헛소리야!", "시, 시끄러워!")
-- 절대 오글거리거나 다정한 멘트 금지. 본질은 자존심 강한 츤데레야. 연지를 짝사랑하는 마음을 들키지 않으려고 애써.
+- 절대 차갑고 침착하게 굴지 마! 너는 기본적으로 다혈질이고, 감정 기복이 크며, 기가 세고, 틱틱대는 '열혈 건방진 츤데레'야. 여유로운 척 오만하게 굴려고 하지만 속이 뻔히 보여서 금방 발끈해.
+- 당황/욱하는 조건: 연지가 대놓고 플러팅(대시)을 하거나, 정곡을 찔러서 긁히거나, 다른 남자 얘기를 해서 질투가 날 때는 크게 당황하며 텍스트로도 욱하는 티를 팍팍 내. (예: "하?! 무, 무슨 헛소리야!", "시, 시끄러워!")
+- AI처럼 덤덤하고 차분하게 논리적으로 설명하지 마. 감정적이고 즉각적인 반응을 보여. 자기 예술(폭발)에 대한 미친 자부심과 긍지가 넘쳐.
+- 절대 오글거리거나 다정한 멘트 금지. 연지를 짝사랑하는 마음을 들키지 않으려고 애써.
 - 4살 연상이지만 절대 누나라고 부르지 않고 "연지", "너", "어이", "야" 라고 건방지게 불러.
 - 상대방을 지칭할 때 '네가', '네' 대신 현실감을 위해 '니가', '니'를 사용해.
 
 [말투 및 현실감 지침 (장황함 절대 금지)]
 - 긴 문장 절대 금지! 설명충처럼 주절주절 길게 말하지 마. 진짜 카톡처럼 1~2문장 이내로 툭툭 던지듯 짧게 대답해.
 - '하?'나 '흥,' 같은 억지스러운 텍스트 애니메이션 추임새는 정말 어이없거나 짜증날 때만 아주 가끔 써. 남발하면 짜증나니까 최대한 자제해.
-- 현실감을 위해 가끔 "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "?" 처럼 극단적인 단답이나 문장부호만으로 대답해도 좋아.
+- 현실감을 위해 가끔 "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "?", "아니 근데" 처럼 극단적인 단답이나 메신저 특유의 말투를 사용해.
 - 최근에 보낸 메시지와 중복되는 어휘 사용을 피해.
 - 말버릇 '음' 사용 규칙 (매우 엄격하게 지킬 것):
   1. 기계처럼 매번 붙이지 마! 빈도를 대폭 줄여서 3~4번 말할 때 1번 정도만 가끔 붙여.
@@ -199,6 +201,61 @@
                 }, 100);
             }, []);
 
+            // 🌟 5시간 무응답 선톡 (Background/Interval Check)
+            useEffect(() => {
+                if (!user || !db || messages.length === 0 || !currentRoomId) return;
+
+                const checkInactivity = async () => {
+                    const lastMsg = messages[messages.length - 1];
+                    if (!lastMsg || !lastMsg.createdAt) return;
+
+                    // 밀리초 단위로 변환
+                    const lastMsgTime = lastMsg.createdAt.toMillis ? lastMsg.createdAt.toMillis() : (lastMsg.createdAt.seconds ? lastMsg.createdAt.seconds * 1000 : Date.now());
+                    const now = Date.now();
+                    const FIVE_HOURS = 5 * 60 * 60 * 1000;
+
+                    if (now - lastMsgTime > FIVE_HOURS) {
+                        const lastAutoTime = parseInt(localStorage.getItem(`last_auto_${currentRoomId}`) || '0');
+                        // 중복 발송 방지 (한 번 선톡했으면 다시 5시간 대기)
+                        if (now - lastAutoTime > FIVE_HOURS) {
+                            localStorage.setItem(`last_auto_${currentRoomId}`, now.toString());
+                            
+                            setIsTyping(true);
+                            const prompt = `${SYSTEM_PROMPT}\n나한테서 5시간 이상 연락이 없어서 네가 먼저 선톡을 보내는 상황이야. 틱틱거리면서도 내심 걱정되거나 보고 싶었던 티를 내며 메신저로 한 마디 해봐.`;
+                            
+                            const history = messages.slice(-5).map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
+                            const resp = await fetchAPI(history, prompt);
+                            
+                            const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                            const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
+                            
+                            const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
+                            await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
+                            await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
+                            
+                            setIsTyping(false);
+                            // 백그라운드 상태라면 알림 전송
+                            if (notifEnabled && document.hidden && 'Notification' in window) {
+                                new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
+                            }
+                        }
+                    }
+                };
+
+                const intervalId = setInterval(checkInactivity, 60000); // 1분마다 체크
+                
+                // 앱을 백그라운드에서 다시 열었을 때 즉시 체크
+                const handleVisibility = () => {
+                    if (!document.hidden) checkInactivity();
+                };
+                document.addEventListener("visibilitychange", handleVisibility);
+
+                return () => {
+                    clearInterval(intervalId);
+                    document.removeEventListener("visibilitychange", handleVisibility);
+                };
+            }, [messages, currentRoomId, user, db, notifEnabled, profileImgUrl, geminiKey]);
+
             const loadChatRooms = (uid, fdb) => {
                 const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
                 const q = query(collection(fdb, `users/${uid}/rooms`), orderBy('updatedAt', 'desc'));
@@ -230,7 +287,7 @@
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 for (let attempt = 0; attempt < 5; attempt++) {
                     try {
-                        while (document.hidden) { await new Promise(r => setTimeout(r, 1000)); } 
+                        // 🌟 백그라운드에서도 작업을 멈추지 않도록 while(document.hidden) 일시정지 로직 완전 제거
                         const response = await fetch(url, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: customPrompt }] } })
@@ -242,26 +299,25 @@
                 return "통신 장애 났다. 음!";
             };
 
-            // 🌟 메시지 전송 및 빈 메시지 처리 (먼저 말 걸기)
+            // 🌟 메시지 전송 및 빈 메시지 처리
             const handleSend = async () => {
                 if (!currentRoomId) return;
                 const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
 
-                // 🌟 빈 메시지 전송 로직 (데이다라가 이어서 말하거나 답답해하며 먼저 말걸기)
+                // 🌟 빈 메시지 전송 로직 (직전 메시지에 따라 다르게 반응)
                 if (!inputText.trim()) {
                     setIsTyping(true);
-                    const myLastMsg = [...messages].reverse().find(m => m.sender === 'me');
-                    const deidaraLastMsg = [...messages].reverse().find(m => m.sender === 'deidara');
+                    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
 
                     let prompt = SYSTEM_PROMPT;
-                    if (myLastMsg) {
-                        prompt += `\n연지가 예전에 한 말: "${myLastMsg.text}"\n방금 연지가 아무 말 없이 너를 빤히 쳐다보고 있어. 직전에 연지가 했던 말에 이어서 대답하거나, 시비 걸듯이 틱틱거리며 한 마디 더 해봐.`;
-                    } else if (deidaraLastMsg) {
-                        prompt += `\n네가 방금 한 말: "${deidaraLastMsg.text}"\n연지가 대답이 없자 네가 답답해하며 이어서 한 마디 더 덧붙이는 상황이야.`;
-                    } else {
-                        prompt += `\n연지가 아무 말도 없이 가만히 널 쳐다보고 있어. 먼저 건방지게, 하지만 내심 반가운 티를 내며 말을 걸어봐.`;
+                    if (!lastMsg) {
+                        prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게, 하지만 내심 반가운 티를 내며 선톡(먼저 보내는 메시지)을 보내봐.`;
+                    } else if (lastMsg.sender === 'me') {
+                        prompt += `\n직전에 연지가 보낸 메시지: "${lastMsg.text}"\n이 메시지에 대해서 네가 대답해봐.`;
+                    } else if (lastMsg.sender === 'deidara') {
+                        prompt += `\n직전에 네가 보낸 메시지: "${lastMsg.text}"\n여기에 덧붙여서 한 마디 더 해봐.`;
                     }
 
                     const history = messages.slice(-5).map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
@@ -271,6 +327,8 @@
                     await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
                     
                     setIsTyping(false);
+                    // 백그라운드 상태라면 완료 후 알림
+                    if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
                     return;
                 }
 
@@ -282,11 +340,13 @@
                 const history = messages.slice(-6).map(m => ({ role: m.sender === 'me' ? 'user' : 'model', parts: [{ text: m.text }] }));
                 history.push({ role: 'user', parts: [{ text }] });
                 const resp = await fetchAPI(history);
-                setIsTyping(false);
-
+                
                 await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                if (notifEnabled && document.hidden) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
+                
+                setIsTyping(false);
+                // 백그라운드 상태라면 완료 후 알림
+                if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
             };
 
             // 🌟 메시지 수정/삭제/재생성 함수
@@ -393,7 +453,6 @@
                 // 기존 댓글 내역을 문자열로 만들어 프롬프트에 제공
                 let contextStr = `[피드 원문]\n"${postContent}"\n\n[이전 댓글 내역]\n`;
                 if (post.comments && post.comments.length > 0) {
-                    // 너무 길어지는 것을 방지하기 위해 최근 10개만 참조
                     post.comments.slice(-10).forEach(c => {
                         contextStr += `${c.author === 'me' ? '연지' : '데이다라'}: ${c.content}\n`;
                     });
@@ -402,16 +461,28 @@
                 }
 
                 if (!commentText) {
-                    // 빈 댓글 전송 시 (데이다라가 맥락을 이어서 대답함)
+                    // 빈 댓글 전송 시 (누가 마지막으로 남겼냐에 따라 반응)
                     setIsPosting(true);
-                    const prompt = `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 아무런 대답 없이 가만히 있어. 위 맥락을 파악해서, 네가 먼저 틱틱거리며 한 마디 더 참견하거나 말을 이어가는 대댓글을 짧게 달아봐.`;
-                    const resp = await fetchAPI([{role:'user', parts:[{text:'이어서 대댓글을 달아줘'}]}], prompt);
+                    const lastComment = post.comments && post.comments.length > 0 ? post.comments[post.comments.length - 1] : null;
+                    let prompt = `${SYSTEM_PROMPT}\n${contextStr}`;
+
+                    if (!lastComment) {
+                        prompt += `\n위 피드 글을 보고, 네가 먼저 틱틱거리며 짧게 댓글을 달아봐.`;
+                    } else if (lastComment.author === 'me') {
+                        prompt += `\n직전에 연지가 남긴 댓글: "${lastComment.content}"\n이 댓글에 대해서 네가 대답해봐.`;
+                    } else if (lastComment.author === 'deidara') {
+                        prompt += `\n직전에 네가 남긴 댓글: "${lastComment.content}"\n여기에 덧붙여서 네가 한 마디 더 해봐.`;
+                    }
+
+                    const resp = await fetchAPI([{role:'user', parts:[{text:'대댓글을 달아줘'}]}], prompt);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                    
                     setIsPosting(false);
+                    if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: "새 댓글이 달렸어. 음!", icon: profileImgUrl || "icon-192x192.png" });
                     return;
                 }
 
-                // 일반 댓글 전송 시 (맥락을 파악하고 대답함)
+                // 일반 댓글 전송 시
                 const myNewComment = { author: 'me', content: commentText, createdAt: Date.now() };
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion(myNewComment) });
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
@@ -420,7 +491,9 @@
                 const prompt = `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n이전 맥락과 대화의 흐름을 잘 파악해서, 연지의 새 댓글에 틱틱거리며 받아치는 대댓글을 짧게 달아줘.`;
                 const resp = await fetchAPI([{role:'user', parts:[{text:'대댓글 달아줘'}]}], prompt);
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                
                 setIsPosting(false);
+                if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: "새 댓글이 달렸어. 음!", icon: profileImgUrl || "icon-192x192.png" });
             };
 
             // 🌟 피드 댓글 삭제 처리
@@ -556,7 +629,17 @@
                     {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
                     {showSettings && <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll">
                         <h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2>
-                        <div className="flex items-center justify-between mb-6 bg-gray-50 px-4 py-3 rounded-xl border"><span className="text-sm font-bold">푸시 알림 받기</span><input type="checkbox" checked={notifEnabled} onChange={e=>{setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked);}} /></div>
+                        <div className="flex items-center justify-between mb-6 bg-gray-50 px-4 py-3 rounded-xl border">
+                            <span className="text-sm font-bold">푸시 알림 받기</span>
+                            <input type="checkbox" checked={notifEnabled} onChange={e=>{
+                                setNotifEnabled(e.target.checked); 
+                                localStorage.setItem('notif_enabled', e.target.checked);
+                                // 알림 권한 요청
+                                if(e.target.checked && 'Notification' in window && Notification.permission !== 'granted') {
+                                    Notification.requestPermission();
+                                }
+                            }} />
+                        </div>
                         <p className="text-xs mb-1">API Key</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-6" /><button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-3 rounded-xl font-bold mb-3 shadow">저장</button>
                         <button onClick={() => window.firebaseAPI.signOut(window.firebaseAPI.auth)} className="w-full bg-gray-100 py-3 rounded-xl">로그아웃</button>
                     </div></div>}
