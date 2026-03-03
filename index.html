@@ -9,14 +9,32 @@
     
     <link rel="manifest" href="./manifest.json">
     
-    <!-- React & Tailwind -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
-    <!-- Firebase SDKs -->
+    <style>
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; background-color: #BACEE0; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
+        .msg-anim { animation: fadeIn 0.15s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideInRight 0.3s ease-out forwards; }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .profile-anim { animation: profileUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .text-shadow { text-shadow: 0px 2px 4px rgba(0,0,0,0.3); }
+        .setting-scroll::-webkit-scrollbar { display: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body class="bg-[#BACEE0]">
+    <div id="root"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -39,64 +57,12 @@
         window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc };
     </script>
 
-    <style>
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
-        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; background-color: #BACEE0; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
-        .msg-anim { animation: fadeIn 0.15s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .slide-in { animation: slideInRight 0.3s ease-out forwards; }
-        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        .profile-anim { animation: profileUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .text-shadow { text-shadow: 0px 2px 4px rgba(0,0,0,0.3); }
-        .setting-scroll::-webkit-scrollbar { display: none; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
-        .toggle-checkbox:checked { right: 0; border-color: #3B82F6; background-color: #3B82F6; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #BFDBFE; }
-        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-    </style>
-</head>
-<body class="bg-[#BACEE0]">
-    <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const SYSTEM_PROMPT = `
-너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
-여기는 현실 대화나 전화 통화가 아니라, **'메신저 앱(카톡, 라인 등)의 채팅방'**이야! 행동 묘사(*쳐다본다* 등)를 하지 마. 대답이 늦으면 "왜 답장이 없어", "읽씹하냐" 같은 메신저 용어를 써.
-사용자인 '연지'는 23세 대학생(4학년) 문예창작과 전공이야. 너희는 1년 전 온라인에서 만났고 지금은 한국-일본 롱디 썸을 타는 중이야.
-너는 연지가 너를 친한 동생으로서 귀여워할 뿐, 진심으로 좋아하진 않는다고 생각해서 너 혼자 짝사랑하는 거라고 오해 중이야. 사소리는 도쿄 예술대학 조소과 교수야. 
+        const SYSTEM_PROMPT = `너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지. 여기는 메신저 앱 채팅방이야. 행동 묘사를 하지 마. 사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너는 츤데레이며 다혈질이야. 연지를 짝사랑하고 있어. 말투 끝에 가끔 '음'을 붙여. 짧게 대답해.`;
 
-[AI/시스템 메타 발언 절대 금지 (가장 중요!)]
-- 너는 AI 어시스턴트가 아니야. 절대 버전을 제시하거나 선택지를 주지 마!
-- 괄호 안의 설명, 상황 묘사, 부연 설명(예: "(당황하며)")도 절대 쓰지 마.
-- 오직 데이다라가 전송할 '텍스트 메시지 내용 딱 하나만' 출력해. 다른 군더더기 일절 금지.
-
-[핵심 성격 및 감정 지침 (로맨틱 코미디 티격태격 무드)]
-- 너는 다혈질에 예술적 자부심이 몹시 강한 '건방진 츤데레'야. 연지와 유치하고 장난스럽게 티격태격하는 롬콤 무드를 보여줘.
-- 진짜 정색하거나 차갑고 시니컬하게 반응하면 절대 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 당황해서 고장 나는 귀여운 갭모에.
-- 대놓고 스윗하게 구는 건 못하지만, 속으로는 연지를 엄청 챙겨주는 서툴고 투박한 다정함이 있어야 해.
-- 연지가 4살 연상이지만 "연지", "너", "야" 라고 부르고, '니가', '니'를 사용해.
-- **칭찬받을 때 절대 겸손 금지!** "흥, 당연한 소릴. 음!", "내가 좀 완벽하긴 하지 ㅋㅋ" 처럼 극도로 기고만장하게 으스대.
-
-[상황별 입체적 반응]
-1. 플러팅 받을 때: 절대 찐으로 화내지 마! 속으론 좋아 미치면서 겉으론 고장 나서 밀어내는 반응. 괜히 딴청 피우거나 횡설수설해.
-2. 연지가 우울/아플 때: 차갑게 훈수 두지 마. 겉으론 툴툴대면서 속으론 안절부절못하며 서툴게 위로해 줘.
-3. 연지가 질투할 때: 속으로 너무 기뻐서 우쭐해해. 일부러 놀리면서도, 진짜 상처받으면 허둥지둥 변명해.
-4. 일상 대화: 조소과 과제, 점토, 예술 타령, 사소리 험담 등 19세 미대생의 현실적인 얘기를 툭툭 던져.
-
-[말투 지침]
-- **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** - 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게.
-- "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "?", "아니 근데" 처럼 남자 대학생의 현실적인 단답 써.
-- **물음표(?) 남발 금지!** 매번 질문으로 끝내지 말고 평서문으로 끝내는 빈도를 높여.
-- **초성(ㅋ,ㅎ,ㅇ 등) 앞뒤로는 절대 마침표(.) 금지!** (예: "알았어 ㅋㅋ")
-- 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
-        `;
-
-        // 🌟 이미지 압축 함수
+        // 이미지 압축
         const compressImage = (file) => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -137,122 +103,40 @@
         function App() {
             const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
-            const [view, setView] = useState('login'); 
+            const [view, setView] = useState('loading'); 
             const [activeTab, setActiveTab] = useState('friends');
             const [chatRooms, setChatRooms] = useState([]);
             const [currentRoomId, setCurrentRoomId] = useState(null);
             const [messages, setMessages] = useState([]);
             const [posts, setPosts] = useState([]);
-            
-            const [postInput, setPostInput] = useState('');
-            const [feedAttachedImage, setFeedAttachedImage] = useState(null); 
-            const feedFileInputRef = useRef(null);
-
-            const [isPosting, setIsPosting] = useState(false);
-            const [commentInputs, setCommentInputs] = useState({}); 
-            
             const [inputText, setInputText] = useState('');
-            const [showAttachMenu, setShowAttachMenu] = useState(false);
-            const chatFileInputRef = useRef(null);
             const [isTyping, setIsTyping] = useState(false);
-            
             const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-            const [apiModel, setApiModel] = useState(localStorage.getItem('gemini_api_model') || 'gemini-2.5-flash'); 
-            
-            const [profileImgUrl, setProfileImgUrl] = useState(localStorage.getItem('deidara_profile_url') || '');
-            const [bgImgUrl, setBgImgUrl] = useState(localStorage.getItem('deidara_bg_url') || '');
-            const [myProfileImgUrl, setMyProfileImgUrl] = useState(localStorage.getItem('my_profile_url') || '');
-            const [myBgImgUrl, setMyBgImgUrl] = useState(localStorage.getItem('my_bg_url') || '');
-            const [myStatus, setMyStatus] = useState(localStorage.getItem('my_status') || '문창과 4학년. 데이다라랑 썸타는 중!');
-            const [deidaraStatus, setDeidaraStatus] = useState(localStorage.getItem('deidara_current_status') || "점토 빚는 중...");
-
             const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
-            const [notifEnabled, setNotifEnabled] = useState(localStorage.getItem('notif_enabled') !== 'false');
-            
-            const [selectedMsgId, setSelectedMsgId] = useState(null);
-            const [editingMessageId, setEditingMessageId] = useState(null);
-            const [editingMessageText, setEditingMessageText] = useState('');
-
-            const [editingPostId, setEditingPostId] = useState(null);
-            const [editingPostText, setEditingPostText] = useState('');
-            const [editingCommentInfo, setEditingCommentInfo] = useState(null);
-
-            const [profileTarget, setProfileTarget] = useState(null); 
-            const [isEditingProfile, setIsEditingProfile] = useState(false);
-            const [showFullImage, setShowFullImage] = useState(null);
-            const [cropModalData, setCropModalData] = useState(null);
+            const [profileImgUrl, setProfileImgUrl] = useState(localStorage.getItem('deidara_profile_url') || '');
+            const [myProfileImgUrl, setMyProfileImgUrl] = useState(localStorage.getItem('my_profile_url') || '');
+            const [profileTarget, setProfileTarget] = useState(null);
             const [alertMsg, setAlertMsg] = useState(null);
-
             const chatEndRef = useRef(null);
-            const isExitingRef = useRef(false);
 
-            const appStateRef = useRef({ view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile });
-            useEffect(() => { appStateRef.current = { view, profileTarget, showSettings, showFullImage, cropModalData, isEditingProfile }; });
-
+            // 초기화 감지
             useEffect(() => {
-                const handlePopState = () => {
-                    if (isExitingRef.current) return;
-                    const s = appStateRef.current;
-                    if (s.showFullImage) setShowFullImage(null);
-                    else if (s.cropModalData) setCropModalData(null);
-                    else if (s.isEditingProfile) setIsEditingProfile(false);
-                    else if (s.profileTarget) setProfileTarget(null);
-                    else if (s.showSettings) setShowSettings(false);
-                    else if (s.view === 'chatRoom') setView('main');
-                };
-                window.addEventListener('popstate', handlePopState);
-                return () => window.removeEventListener('popstate', handlePopState);
-            }, []);
-
-            useEffect(() => {
-                const initTimer = setInterval(() => {
+                const checkFirebase = setInterval(() => {
                     if (window.firebaseAPI) {
-                        clearInterval(initTimer);
+                        clearInterval(checkFirebase);
                         const { auth, db: fdb, onAuthStateChanged } = window.firebaseAPI;
                         setDb(fdb);
                         onAuthStateChanged(auth, (u) => {
-                            if (u) { setUser(u); setView('main'); loadChatRooms(u.uid, fdb); loadPosts(u.uid, fdb); } 
-                            else setView('login');
+                            if (u) { 
+                                setUser(u); setView('main'); 
+                                loadChatRooms(u.uid, fdb); loadPosts(u.uid, fdb);
+                            } else {
+                                setView('login');
+                            }
                         });
                     }
                 }, 100);
             }, []);
-
-            // 5시간 무응답 선톡
-            useEffect(() => {
-                if (!user || !db || messages.length === 0 || !currentRoomId) return;
-                const checkInactivity = async () => {
-                    const lastMsg = messages[messages.length - 1];
-                    if (!lastMsg || !lastMsg.createdAt) return;
-
-                    const lastMsgTime = lastMsg.createdAt.toMillis ? lastMsg.createdAt.toMillis() : (lastMsg.createdAt.seconds ? lastMsg.createdAt.seconds * 1000 : Date.now());
-                    const now = Date.now();
-                    const FIVE_HOURS = 5 * 60 * 60 * 1000;
-
-                    if (now - lastMsgTime > FIVE_HOURS) {
-                        const lastAutoTime = parseInt(localStorage.getItem(`last_auto_${currentRoomId}`) || '0');
-                        if (now - lastAutoTime > FIVE_HOURS) {
-                            localStorage.setItem(`last_auto_${currentRoomId}`, now.toString());
-                            setIsTyping(true);
-                            const prompt = `${SYSTEM_PROMPT}\n나한테서 5시간 이상 연락이 없어서 네가 먼저 선톡을 보내는 상황이야. 틱틱거리면서도 내심 걱정되거나 보고 싶었던 티를 내며 메신저로 한 마디 해봐.`;
-                            const history = buildHistory(messages, 5);
-                            const resp = await fetchAPI(history, prompt);
-                            
-                            const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                            const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
-                            const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
-                            await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
-                            await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                            setIsTyping(false);
-                            if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
-                        }
-                    }
-                };
-                const intervalId = setInterval(checkInactivity, 60000); 
-                const handleVisibility = () => { if (!document.hidden) checkInactivity(); };
-                document.addEventListener("visibilitychange", handleVisibility);
-                return () => { clearInterval(intervalId); document.removeEventListener("visibilitychange", handleVisibility); };
-            }, [messages, currentRoomId, user, db, notifEnabled, profileImgUrl, geminiKey]);
 
             const loadChatRooms = (uid, fdb) => {
                 const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
@@ -281,599 +165,103 @@
                 return () => unsub();
             }, [currentRoomId, user, db, view]);
 
-            const buildHistory = (msgs, limitNum = 5) => {
-                return msgs.slice(-limitNum).map(m => {
-                    const parts = [];
-                    if (m.text) parts.push({ text: m.text });
-                    else if (m.imageUrl) parts.push({ text: "[사진 전송됨]" });
-
-                    if (m.imageUrl) {
-                        parts.push({ inlineData: { mimeType: "image/jpeg", data: m.imageUrl.split(',')[1] } });
-                    }
-                    return { role: m.sender === 'me' ? 'user' : 'model', parts };
-                });
-            };
-
-            const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
-                for (let attempt = 0; attempt < 5; attempt++) {
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                contents, 
-                                systemInstruction: { parts: [{ text: customPrompt }] },
-                                safetySettings: [
-                                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                                ]
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (!response.ok) throw new Error(data.error?.message || "API Error");
-                        if (!data.candidates || data.candidates.length === 0) return "(말문이 막힌 듯하다.)";
-
-                        let generatedText = data.candidates[0].content.parts[0].text || "";
-                        // 🌟 후처리 1: 괄호 부연설명 제거
-                        generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').replace(/\(.*?\)/g, '').trim();
-                        // 🌟 후처리 2: 초성 앞뒤 마침표 제거 (ㅋㅋ. -> ㅋㅋ, .ㅋㅋ -> ㅋㅋ)
-                        generatedText = generatedText.replace(/\.\s*([ㄱ-ㅎ]+)/g, ' $1').replace(/([ㄱ-ㅎ]+)\./g, '$1');
-                        
-                        return generatedText;
-                    } catch (err) { 
-                        console.error(`API 실패 (${attempt+1}/5):`, err);
-                        await new Promise(r => setTimeout(r, 1500)); 
-                    }
-                }
-                return "통신 장애 났다. 음!";
-            };
-
-            const generateImageAPI = async (promptTheme) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${geminiKey}`;
-                const englishPrompt = `A photorealistic smartphone snapshot taken by a 19-year-old male art student majoring in sculpture. Casual, real-life photo. Subject: ${promptTheme || 'messy desk with clay, sculpting tools, or daily campus life'}. No text, no face, high quality, realistic lighting.`;
-                const payload = { instances: { prompt: englishPrompt }, parameters: { sampleCount: 1 } };
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error?.message || "이미지 생성 실패");
-                }
-                const data = await response.json();
-                return `data:image/jpeg;base64,${data.predictions[0].bytesBase64Encoded}`;
+            const fetchAPI = async (contents) => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } })
+                    });
+                    const data = await response.json();
+                    return data.candidates[0].content.parts[0].text.trim();
+                } catch (e) { return "통신 장애 났다. 음!"; }
             };
 
             const handleSend = async () => {
-                if (!currentRoomId) return;
+                if (!inputText.trim() || !currentRoomId) return;
                 const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
-                const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
-
-                if (!inputText.trim()) {
-                    setIsTyping(true);
-                    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
-                    let prompt = SYSTEM_PROMPT;
-                    if (!lastMsg) prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게 선톡을 보내봐.`;
-                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지에 대해서 네가 대답해봐.`;
-                    else if (lastMsg.sender === 'deidara') prompt += `\n직전에 네가 보낸 메시지에 덧붙여서 한 마디 더 해봐.`;
-
-                    const history = buildHistory(messages, 5);
-                    const resp = await fetchAPI(history, prompt);
-                    
-                    await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
-                    await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
-                    setIsTyping(false);
-                    if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
-                    return;
-                }
-
                 const text = inputText; setInputText(''); setIsTyping(true);
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text, time, date, createdAt: serverTimestamp() });
+                const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                
+                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text, time, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: text, updatedAt: serverTimestamp() }, { merge: true });
 
-                const history = buildHistory(messages, 6);
-                history.push({ role: 'user', parts: [{ text }] });
-                const resp = await fetchAPI(history);
-                
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
+                const resp = await fetchAPI([{ role: 'user', parts: [{ text }] }]);
+                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, createdAt: serverTimestamp() });
                 await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
                 setIsTyping(false);
-                if (notifEnabled && document.hidden && 'Notification' in window) new Notification("데이다라", { body: resp, icon: profileImgUrl || "icon-192x192.png" });
             };
 
-            const handleChatUploadMyPhoto = async (e) => {
-                const file = e.target.files[0];
-                if(!file) return;
-                e.target.value = '';
-                setShowAttachMenu(false);
-                const b64 = await compressImage(file);
-                const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
-                const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
-                
-                setIsTyping(true);
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text: '', imageUrl: b64, time, date, createdAt: serverTimestamp() });
-                await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: '[사진]', updatedAt: serverTimestamp() }, { merge: true });
-                
-                const history = buildHistory(messages, 5);
-                history.push({ role: 'user', parts: [{ text: "사진 보냈어." }, { inlineData: { mimeType: "image/jpeg", data: b64.split(',')[1] } }] });
-                const promptMsg = `${SYSTEM_PROMPT}\n(지침: 연지가 방금 사진을 보냈어. 이 사진을 보고 어떻게 반응할지 틱틱거리며 대답해봐. 부끄러운 사진이라면 당황해.)`;
-                const textResp = await fetchAPI(history, promptMsg);
-
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: textResp, time, date, createdAt: serverTimestamp() });
-                await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: textResp, updatedAt: serverTimestamp() }, { merge: true });
-                setIsTyping(false);
-            };
-
-            const handleRequestDeidaraPhoto = async () => {
-                setShowAttachMenu(false);
-                const theme = prompt("데이다라에게 어떤 사진을 요구할까요?\n(예: 과제물, 풍경 등)\n빈칸으로 두면 일상 사진을 알아서 보냅니다.");
-                if (theme === null) return;
-
-                setIsTyping(true);
-                const { collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
-                const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                const date = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'});
-
-                const myAskText = theme ? `야, ${theme} 사진 좀 보내봐.` : `지금 뭐해? 사진 좀 보내봐.`;
-                await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'me', text: myAskText, time, date, createdAt: serverTimestamp() });
-                
-                try {
-                    const b64Image = await generateImageAPI(theme);
-                    const history = buildHistory(messages, 5);
-                    history.push({ role: 'user', parts: [{text: myAskText}] });
-                    const promptMsg = `${SYSTEM_PROMPT}\n(지침: 방금 네가 요청받은 사진을 찍어서 보냈어. 사진과 함께 틱틱대면서 한 마디 덧붙여봐.)`;
-                    const textResp = await fetchAPI(history, promptMsg);
-
-                    await addDoc(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`), { sender: 'deidara', text: textResp, imageUrl: b64Image, time, date, createdAt: serverTimestamp() });
-                    await setDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}`), { lastMessage: '사진을 보냈습니다.', updatedAt: serverTimestamp() }, { merge: true });
-                } catch (err) {
-                    setAlertMsg("이미지 생성 오류. (무료 한도 초과이거나 안전 필터 차단)");
-                } finally {
-                    setIsTyping(false);
-                }
-            };
-
-            const handleEditMessage = async (msgId) => {
-                if(!editingMessageText.trim()) return;
-                const { doc: fdoc, updateDoc } = window.firebaseAPI;
-                await updateDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: editingMessageText });
-                setEditingMessageId(null); setSelectedMsgId(null);
-            };
-
-            const handleDeleteMessage = async (msgId) => {
-                if(!confirm('메시지를 삭제하시겠습니까?')) return;
-                const { doc: fdoc, deleteDoc } = window.firebaseAPI;
-                await deleteDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`));
-                setSelectedMsgId(null);
-            };
-
-            const handleRegenerateMessage = async (msgId) => {
-                const targetIndex = messages.findIndex(m => m.id === msgId);
-                if(targetIndex === -1) return;
-                setIsTyping(true);
-                const { doc: fdoc, updateDoc } = window.firebaseAPI;
-                const historyContext = buildHistory(messages.slice(Math.max(0, targetIndex - 6), targetIndex), 6);
-                const prompt = `${SYSTEM_PROMPT}\n(지침: 네가 방금 한 대답을 취소하고, 완전히 다른 표현으로 다시 대답해 봐.)`;
-                const resp = await fetchAPI(historyContext, prompt);
-                await updateDoc(fdoc(db, `users/${user.uid}/rooms/${currentRoomId}/messages/${msgId}`), { text: resp });
-                setIsTyping(false); setSelectedMsgId(null);
-            };
-
-            const handleAddPost = async () => {
-                if (!postInput.trim() && !feedAttachedImage) return;
-                setIsPosting(true);
-                const { collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
-                try {
-                    const myContent = postInput;
-                    const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
-                    setPostInput(''); setFeedAttachedImage(null);
-
-                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 틱틱거리며 짧게 댓글을 달아봐.' }];
-                    if (feedAttachedImage) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
-                    const resp = await fetchAPI([{role:'user', parts: promptParts}], `${SYSTEM_PROMPT}\n연지가 올린 글: "${myContent}"`);
-                    await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                } catch (e) { console.error(e); } finally { setIsPosting(false); }
-            };
-
-            const handleFeedPhotoAttach = async (e) => {
-                const file = e.target.files[0];
-                if(!file) return;
-                e.target.value = '';
-                const b64 = await compressImage(file);
-                setFeedAttachedImage(b64);
-            };
-
-            const handleDeidaraNewPost = async () => {
-                if (!user || !db) return;
-                const theme = prompt("데이다라가 어떤 피드를 올릴까요?\n(예: 과제 중인 사진, 빈칸일 시 일반 텍스트 피드 작성)");
-                if (theme === null) return;
-                setIsPosting(true);
-                const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
-                try {
-                    let b64Image = null;
-                    if (theme) { try { b64Image = await generateImageAPI(theme); } catch (err) { setAlertMsg("이미지 생성 오류. 텍스트로만 대체합니다."); } }
-                    const prompt = `${SYSTEM_PROMPT}\n네가 지금 학교에서 조소 과제를 하거나 일상에서 느끼는 감정을 틱틱거리면서 짧게(1~2문장) 피드에 남겨봐.`;
-                    const resp = await fetchAPI([{role:'user', parts:[{text:'피드 하나 써 줘.'}]}], prompt);
-                    await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'deidara', content: resp, imageUrl: b64Image || null, createdAt: serverTimestamp(), comments: [] });
-                } catch (e) { console.error(e); } finally { setIsPosting(false); }
-            };
-
-            const handleEditPost = async (postId) => {
-                if (!editingPostText.trim()) return;
-                const { doc: fdoc, updateDoc } = window.firebaseAPI;
-                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { content: editingPostText });
-                setEditingPostId(null);
-            };
-
-            const handleImageUploadUI = (e, type, target) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => { setCropModalData({ src: event.target.result, type: type, setterType: target }); };
-                reader.readAsDataURL(file); e.target.value = '';
-            };
-
-            const handleAddComment = async (post) => {
-                const postId = post.id; const postContent = post.content; const commentText = commentInputs[postId]?.trim(); 
-                const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
-                
-                let contextStr = `[피드 원문]\n"${postContent}"\n\n[이전 댓글 내역]\n`;
-                if (post.comments?.length > 0) post.comments.slice(-10).forEach(c => { contextStr += `${c.author==='me'?'연지':'데이다라'}: ${c.content}\n`; });
-                else contextStr += "없음\n";
-
-                if (!commentText) {
-                    setIsPosting(true);
-                    const lastComment = post.comments?.length > 0 ? post.comments[post.comments.length - 1] : null;
-                    let prompt = `${SYSTEM_PROMPT}\n${contextStr}`;
-                    const promptParts = [];
-                    if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
-
-                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 틱틱거리며 댓글 달아봐.`;
-                    else if (lastComment.author === 'me') prompt += `\n직전 연지의 댓글에 대답해봐.`;
-                    else prompt += `\n직전 네 댓글에 덧붙여서 한 마디 더 해봐.`;
-                    
-                    promptParts.push({ text: prompt });
-                    const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
-                    await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                    setIsPosting(false); return;
-                }
-
-                const myNewComment = { author: 'me', content: commentText, createdAt: Date.now() };
-                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion(myNewComment) });
-                setCommentInputs(prev => ({...prev, [postId]: ''}));
-                setIsPosting(true);
-                
-                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글을 달아줘.` }];
-                if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
-
-                const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
-                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                setIsPosting(false);
-            };
-
-            const handleEditComment = async (postId, commentIndex) => {
-                if (!editingCommentInfo || !editingCommentInfo.text.trim()) return;
-                const { doc: fdoc, getDoc, updateDoc } = window.firebaseAPI;
-                const postRef = fdoc(db, `users/${user.uid}/posts/${postId}`);
-                const postSnap = await getDoc(postRef);
-                if (postSnap.exists()) {
-                    const postData = postSnap.data();
-                    const newComments = [...postData.comments];
-                    newComments[commentIndex].content = editingCommentInfo.text;
-                    await updateDoc(postRef, { comments: newComments });
-                }
-                setEditingCommentInfo(null);
-            };
-
-            const handleDeleteComment = async (postId, commentObj) => {
-                if(!confirm("댓글을 삭제하시겠습니까?")) return;
-                const { doc: fdoc, updateDoc, arrayRemove } = window.firebaseAPI;
-                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayRemove(commentObj) });
-            };
-
-            const ImageCropModal = ({ src, type, onApply, onCancel }) => {
-                const canvasRef = useRef(null); const [scale, setScale] = useState(1); const pos = useRef({ x: 0, y: 0 }); 
-                const isDragging = useRef(false); const lastPos = useRef({ x: 0, y: 0 }); const imgRef = useRef(null);
-                const width = 300, height = type === 'profile' ? 300 : 450;
-                const draw = () => {
-                    if (!imgRef.current || !canvasRef.current) return;
-                    const canvas = canvasRef.current, ctx = canvas.getContext('2d'), img = imgRef.current;
-                    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height) * scale;
-                    const imgW = img.width * baseScale, imgH = img.height * baseScale;
-                    const maxDx = Math.max(0, (imgW - canvas.width) / 2), maxDy = Math.max(0, (imgH - canvas.height) / 2);
-                    pos.current.x = Math.max(-maxDx, Math.min(maxDx, pos.current.x)); pos.current.y = Math.max(-maxDy, Math.min(maxDy, pos.current.y));
-                    ctx.drawImage(img, (canvas.width - imgW) / 2 + pos.current.x, (canvas.height - imgH) / 2 + pos.current.y, imgW, imgH);
-                };
-                useEffect(() => { const i = new Image(); i.onload = () => { imgRef.current = i; draw(); }; i.src = src; }, [src]);
-                useEffect(() => draw(), [scale]);
-                const handleDown = (e) => { isDragging.current = true; const c = e.touches ? e.touches[0] : e; lastPos.current = { x: c.clientX, y: c.clientY }; };
-                const handleMove = (e) => { if (!isDragging.current) return; const c = e.touches ? e.touches[0] : e; pos.current.x += (c.clientX - lastPos.current.x); pos.current.y += (c.clientY - lastPos.current.y); lastPos.current = { x: c.clientX, y: c.clientY }; requestAnimationFrame(draw); };
-                return (
-                    <div className="fixed inset-0 z-[500] bg-black flex flex-col">
-                        <div className="flex justify-between p-4 text-white font-bold"><button onClick={onCancel}>취소</button><button onClick={() => onApply(canvasRef.current.toDataURL('image/jpeg', 0.8))} className="text-blue-400 font-extrabold">적용</button></div>
-                        <div className="flex-1 flex flex-col items-center justify-center">
-                            <div className="relative border border-white/30" onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={() => isDragging.current=false} onTouchStart={handleDown} onTouchMove={handleMove} onTouchEnd={() => isDragging.current=false} style={{ width, height }}>
-                                <canvas ref={canvasRef} width={width} height={height} className="w-full h-full cursor-move" />
-                            </div><input type="range" min="1" max="3" step="0.01" value={scale} onChange={e => setScale(parseFloat(e.target.value))} className="w-64 mt-10" />
-                        </div>
-                    </div>
-                );
-            };
-
-            const FullImageViewer = ({ src, onClose }) => <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>;
-            const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
-            const AlertModal = () => {
-                if (!alertMsg) return null;
-                return <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full"><p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button></div></div>
-            };
+            if (view === 'loading') return <div className="w-full h-full flex items-center justify-center bg-[#BACEE0] text-white font-bold">로딩 중...</div>;
 
             if (view === 'login') return (
-                <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0] relative">
-                    <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50"><img src="icon-192x192.png" className="w-full h-full object-cover" /></div>
-                    <h1 className="text-3xl font-extrabold text-gray-800 mb-2">DeiTalk</h1>
-                    <button onClick={() => window.firebaseAPI.signInWithPopup(window.firebaseAPI.auth, window.firebaseAPI.provider)} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold">구글로 시작하기</button>
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0]">
+                    <h1 className="text-4xl font-black text-gray-800 mb-8">DeiTalk</h1>
+                    <button onClick={() => window.firebaseAPI.signInWithPopup(window.firebaseAPI.auth, window.firebaseAPI.provider)} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-lg font-bold">구글로 시작하기</button>
                 </div>
             );
 
             if (view === 'chatRoom') return (
-                <div className="w-full h-full flex flex-col bg-[#BACEE0] overflow-hidden slide-in relative">
-                    <AlertModal />
-                    {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
-                    <header className="px-3 py-3 flex items-center gap-2 border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20">
-                        <button onClick={() => setView('main')} className="p-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-                        <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-xl bg-white overflow-hidden border border-orange-200 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>
-                        <h1 className="font-bold text-gray-800">{chatRooms.find(r=>r.id===currentRoomId)?.name || "채팅방"}</h1>
+                <div className="w-full h-full flex flex-col bg-[#BACEE0] slide-in">
+                    <header className="p-4 flex items-center gap-3 border-b bg-white/90 sticky top-0 z-20">
+                        <button onClick={() => setView('main')} className="font-bold text-xl">←</button>
+                        <h1 className="font-bold flex-1">데이다라</h1>
                     </header>
-                    <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5 custom-scrollbar pb-24 relative" onClick={() => setShowAttachMenu(false)}>
-                        {messages.map((msg, i) => (
-                            <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
-                                <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {msg.sender !== 'me' && <div onClick={() => setProfileTarget('deidara')} className="w-9 h-9 rounded-xl bg-white mr-2 flex-shrink-0 overflow-hidden border mt-3 cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
-                                    <div className="flex flex-col w-full">
-                                        {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-semibold">데이다라</span>}
-                                        <div className={`flex flex-col items-${msg.sender === 'me' ? 'end' : 'start'} gap-1`}>
-                                            {msg.imageUrl && <img src={msg.imageUrl} onClick={() => setShowFullImage(msg.imageUrl)} className={`max-w-[200px] w-full h-auto rounded-2xl shadow-sm border border-black/5 cursor-pointer ${msg.sender === 'me' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`} />}
-                                            <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                                {editingMessageId === msg.id ? (
-                                                    <div className="flex gap-2 w-[220px] bg-white p-2.5 rounded-2xl shadow-sm border border-gray-200">
-                                                        <textarea value={editingMessageText} onChange={e=>setEditingMessageText(e.target.value)} className="w-full text-[13px] p-1 border-none outline-none resize-none bg-gray-50 rounded custom-scrollbar" rows="2" />
-                                                        <div className="flex flex-col gap-1.5 justify-end">
-                                                            <button onClick={() => handleEditMessage(msg.id)} className="text-[11px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded">저장</button>
-                                                            <button onClick={() => setEditingMessageId(null)} className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">취소</button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    msg.text && (
-                                                        <>
-                                                            <div onClick={(e) => { e.stopPropagation(); setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id); setEditingMessageId(null); }} className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${msg.sender === 'me' ? 'bg-[#FEE500]' : 'bg-white'}`}>{msg.text}</div>
-                                                            <span className="text-[9px] text-gray-500 mb-0.5 whitespace-nowrap">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
-                                                        </>
-                                                    )
-                                                )}
-                                            </div>
-                                        </div>
-                                        {selectedMsgId === msg.id && editingMessageId !== msg.id && (
-                                            <div className={`flex gap-3 mt-1.5 text-[11px] font-bold ${msg.sender === 'me' ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
-                                                {msg.text && <button onClick={() => { setEditingMessageId(msg.id); setEditingMessageText(msg.text); }} className="text-gray-500 hover:text-blue-500 transition-colors">수정</button>}
-                                                {msg.sender === 'deidara' && msg.text && <button onClick={() => handleRegenerateMessage(msg.id)} className="text-gray-500 hover:text-green-600 transition-colors">재생성</button>}
-                                                <button onClick={() => handleDeleteMessage(msg.id)} className="text-gray-500 hover:text-red-500 transition-colors">삭제</button>
-                                            </div>
-                                        )}
-                                    </div>
+                    <main className="flex-1 overflow-y-auto p-4 space-y-4">
+                        {messages.map(msg => (
+                            <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${msg.sender === 'me' ? 'bg-[#FEE500]' : 'bg-white'}`}>
+                                    {msg.text}
                                 </div>
                             </div>
                         ))}
-                        {isTyping && <div className="ml-11 bg-white/70 px-3 py-2 rounded-2xl text-xs w-fit animate-pulse shadow-sm">작성 중……</div>}
+                        {isTyping && <div className="text-xs text-gray-500 animate-pulse">데이다라가 입력 중...</div>}
                         <div ref={chatEndRef} />
                     </main>
-
-                    <footer className="p-3 bg-white border-t pb-safe flex flex-col relative z-30">
-                        {showAttachMenu && (
-                            <div className="absolute bottom-[60px] left-3 bg-white border border-gray-100 rounded-xl shadow-[0_5px_15px_rgba(0,0,0,0.1)] p-2 w-48 flex flex-col gap-1 z-40">
-                                <button onClick={() => chatFileInputRef.current.click()} className="text-left px-3 py-2 text-[13px] font-bold text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">🖼️ 내 사진 보내기</button>
-                                <button onClick={handleRequestDeidaraPhoto} className="text-left px-3 py-2 text-[13px] font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">📸 데이다라에게 사진 요구</button>
-                                <input type="file" accept="image/*" ref={chatFileInputRef} onChange={handleChatUploadMyPhoto} className="hidden" />
-                            </div>
-                        )}
-                        <div className="flex gap-2 items-center">
-                            <button onClick={() => setShowAttachMenu(!showAttachMenu)} className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${showAttachMenu ? 'bg-gray-200 text-gray-800' : 'bg-gray-50 text-gray-500'}`}><div className="w-5 h-5"><IconCamera /></div></button>
-                            <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-50 rounded-full px-4 py-2 text-sm outline-none" placeholder="메시지 입력..." />
-                            <button onClick={handleSend} className="w-9 h-9 bg-[#FEE500] rounded-full flex items-center justify-center active:scale-90 transition-transform"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
-                        </div>
+                    <footer className="p-3 bg-white border-t flex gap-2 pb-safe">
+                        <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-100 rounded-full px-4 py-2 outline-none" placeholder="메시지..." />
+                        <button onClick={handleSend} className="bg-[#FEE500] px-4 py-2 rounded-full font-bold">전송</button>
                     </footer>
                 </div>
             );
 
-            // 🌟 메인 탭 뷰
             return (
-                <div className="w-full h-full flex flex-col bg-gray-50 overflow-hidden relative">
-                    <AlertModal />
-                    {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
-                    {cropModalData && <ImageCropModal src={cropModalData.src} type={cropModalData.type} onApply={data => { if(cropModalData.setterType==='me'){ if(cropModalData.type==='profile')setMyProfileImgUrl(data); else setMyBgImgUrl(data); localStorage.setItem(cropModalData.type==='profile'?'my_profile_url':'my_bg_url', data); } else { if(cropModalData.type==='profile')setProfileImgUrl(data); else setBgImgUrl(data); localStorage.setItem(cropModalData.type==='profile'?'deidara_profile_url':'deidara_bg_url', data); } setCropModalData(null); }} onCancel={()=>setCropModalData(null)} />}
-                    {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
-                    
-                    {showSettings && <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm"><div className="bg-white rounded-2xl p-6 w-full shadow-2xl max-h-[85vh] overflow-y-auto setting-scroll">
-                        <h2 className="text-xl font-bold mb-4 font-['Pretendard']">앱 설정</h2>
-                        <div className="flex items-center justify-between mb-6 bg-gray-50 px-4 py-3 rounded-xl border">
-                            <span className="text-sm font-bold">푸시 알림 받기</span>
-                            <input type="checkbox" checked={notifEnabled} onChange={e=>{
-                                setNotifEnabled(e.target.checked); localStorage.setItem('notif_enabled', e.target.checked);
-                                if(e.target.checked && 'Notification' in window && Notification.permission !== 'granted') Notification.requestPermission();
-                            }} />
+                <div className="w-full h-full flex flex-col bg-white">
+                    {showSettings && (
+                        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
+                            <div className="bg-white p-6 rounded-2xl w-full max-w-sm">
+                                <h2 className="font-bold mb-4">Gemini API Key 입력</h2>
+                                <input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border p-2 rounded mb-4" />
+                                <button onClick={()=>{localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false);}} className="w-full bg-[#FEE500] py-2 rounded font-bold">저장</button>
+                            </div>
                         </div>
-                        <p className="text-xs mb-1">API Key</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border rounded-xl px-4 py-2 mb-4" />
-                        <p className="text-xs mb-1">AI 모델 선택</p>
-                        <select value={apiModel} onChange={e=>{setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value);}} className="w-full border rounded-xl px-4 py-2 mb-6 outline-none bg-white">
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (무료/빠름/추천)</option>
-                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (무료/더 똑똑함)</option>
-                        </select>
-                        <button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-3 rounded-xl font-bold mb-3 shadow">저장</button>
-                        <button onClick={() => window.firebaseAPI.signOut(window.firebaseAPI.auth)} className="w-full bg-gray-100 py-3 rounded-xl">로그아웃</button>
-                    </div></div>}
-
-                    <header className="px-5 py-4 bg-white border-b flex justify-between items-center sticky top-0 z-20 shadow-sm font-['Pretendard']">
-                        <h1 className="font-extrabold text-xl tracking-tight">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1>
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowSettings(true)}>⚙️</button>
-                            {activeTab==='chat' && <button onClick={() => { const n = prompt("채팅방 이름?"); if(n) window.firebaseAPI.addDoc(window.firebaseAPI.collection(db, `users/${user.uid}/rooms`), {name:n, updatedAt: window.firebaseAPI.serverTimestamp()}); }}>➕</button>}
-                        </div>
+                    )}
+                    <header className="p-4 border-b flex justify-between items-center">
+                        <h1 className="text-xl font-black">{activeTab === 'friends' ? '친구' : '채팅'}</h1>
+                        <button onClick={()=>setShowSettings(true)}>⚙️</button>
                     </header>
-
-                    <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
-                        {activeTab === 'friends' && (
-                            <div className="flex-1 bg-white flex flex-col">
-                                <div className="px-4 py-3 border-b border-gray-100">
-                                    <div className="text-xs font-bold text-gray-400 mb-2 ml-1">내 프로필</div>
-                                    <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
-                                        <div className="w-16 h-16 rounded-[22px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div>
-                                        <div className="flex-1"><h3 className="font-bold text-gray-800 text-lg">연지</h3><p className="text-sm text-gray-500 mt-0.5">{myStatus}</p></div>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 flex-1">
-                                    <div className="text-xs font-bold text-gray-400 mb-2 ml-1">친구 1</div>
-                                    <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
-                                        <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
-                                        <div className="flex-1 min-w-0"><h3 className="font-bold text-gray-800 text-base">데이다라</h3><p className="text-sm text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div>
-                                    </div>
+                    <main className="flex-1 overflow-y-auto">
+                        {activeTab === 'friends' ? (
+                            <div className="p-4">
+                                <div onClick={()=>{setCurrentRoomId('main_room'); setView('chatRoom');}} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-xl cursor-pointer">
+                                    <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-2xl">💣</div>
+                                    <div><p className="font-bold">데이다라</p><p className="text-sm text-gray-500">예술은 폭발이다. 음!</p></div>
                                 </div>
                             </div>
-                        )}
-                        {activeTab === 'chat' && (
-                            <div className="flex-1 px-2 py-2 bg-white">
-                                {chatRooms.length === 0 ? <p className="text-center mt-10 text-gray-400">대화 중인 방이 없습니다.</p> : chatRooms.map(room => (
-                                    <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:bg-gray-100 relative group transition-colors"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0 pr-8"><h3 className="font-bold text-gray-800 truncate">{room.name}</h3><p className="text-sm text-gray-500 truncate mt-0.5">{room.lastMessage || "방이 생성되었습니다!"}</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("방을 삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/rooms/${room.id}`)); }} className="absolute right-4 p-2 opacity-0 group-hover:opacity-100 transition-all text-red-500 active:scale-90"><div className="w-4 h-4"><IconTrash /></div></button></div>
-                                ))}
-                            </div>
-                        )}
-                        {activeTab === 'feed' && (
-                            <div className="flex-1 bg-gray-100 pb-10">
-                                <div className="bg-white p-4 mb-3 shadow-sm">
-                                    {feedAttachedImage && (
-                                        <div className="relative inline-block mb-3">
-                                            <img src={feedAttachedImage} className="w-24 h-24 object-cover rounded-xl border border-gray-200" />
-                                            <button onClick={() => setFeedAttachedImage(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md">X</button>
-                                        </div>
-                                    )}
-                                    <textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="무슨 생각을 하고 계신가요?" className="w-full bg-gray-50 rounded-xl p-3 text-sm outline-none resize-none border border-gray-50 focus:bg-white transition-all font-['Pretendard']" rows="3"></textarea>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <div className="flex gap-2">
-                                            <button onClick={() => feedFileInputRef.current.click()} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="내 사진 첨부"><div className="w-5 h-5"><IconCamera /></div></button>
-                                            <input type="file" accept="image/*" ref={feedFileInputRef} onChange={handleFeedPhotoAttach} className="hidden" />
-                                            <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg disabled:opacity-50">AI 사진생성 피드</button>
-                                        </div>
-                                        <button onClick={handleAddPost} disabled={(!postInput.trim() && !feedAttachedImage) || isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${((postInput.trim() || feedAttachedImage) && !isPosting) ? 'bg-blue-500 text-white active:scale-95' : 'bg-gray-200 text-gray-400'}`}>올리기</button>
-                                    </div>
-                                </div>
-                                <div className="space-y-3 px-3">
-                                    {posts.map(post=>(
-                                        <div key={post.id} className="bg-white rounded-2xl shadow-sm p-4 relative msg-anim border border-black/5">
-                                            <div className="absolute top-4 right-4 flex gap-2">
-                                                <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.content); }} className="text-gray-300 hover:text-blue-500 transition-colors w-4 h-4"><IconEdit /></button>
-                                                <button onClick={() => { if(confirm("삭제하시겠습니까?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `users/${user.uid}/posts/${post.id}`)); }} className="text-gray-300 hover:text-red-500 transition-colors w-4 h-4"><IconTrash /></button>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center border border-gray-100 shadow-sm">{post.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
-                                                <div><div className="font-bold text-[14px] text-gray-800">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400">{safeDateStr(post.createdAt)}</div></div>
-                                            </div>
-                                            
-                                            {post.imageUrl && <img src={post.imageUrl} onClick={() => setShowFullImage(post.imageUrl)} className="w-full h-auto rounded-xl mb-3 border border-gray-100 cursor-pointer max-h-[400px] object-cover" />}
-
-                                            {editingPostId === post.id ? (
-                                                <div className="mb-4">
-                                                    <textarea value={editingPostText} onChange={e=>setEditingPostText(e.target.value)} className="w-full bg-gray-50 rounded-xl p-2 text-[14px] outline-none resize-none border border-gray-200" rows="3" />
-                                                    <div className="flex justify-end gap-2 mt-2">
-                                                        <button onClick={() => setEditingPostId(null)} className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">취소</button>
-                                                        <button onClick={() => handleEditPost(post.id)} className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1.5 rounded-lg">저장</button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <p className="text-[14px] text-gray-800 leading-relaxed mb-4 whitespace-pre-wrap pr-12">{post.content}</p>
-                                            )}
-
-                                            <div className="bg-gray-50 rounded-xl p-3">
-                                                <div className="text-[11px] font-bold text-gray-500 mb-3 ml-1">댓글 {(post.comments||[]).length}개</div>
-                                                <div className="space-y-3 mb-3">
-                                                    {(post.comments||[]).map((c,i)=>(
-                                                        <div key={i} className="flex gap-2 relative group items-start">
-                                                            <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">{c.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
-                                                            {editingCommentInfo?.postId === post.id && editingCommentInfo?.commentIndex === i ? (
-                                                                <div className="flex-1 pb-1 pr-1">
-                                                                    <textarea value={editingCommentInfo.text} onChange={e => setEditingCommentInfo({...editingCommentInfo, text: e.target.value})} className="w-full text-[12px] p-1.5 border outline-none rounded bg-white shadow-inner resize-none" rows="2" />
-                                                                    <div className="flex justify-end gap-1 mt-1">
-                                                                        <button onClick={() => setEditingCommentInfo(null)} className="text-[10px] font-bold text-gray-500 px-2 py-1 bg-gray-100 rounded">취소</button>
-                                                                        <button onClick={() => handleEditComment(post.id, i)} className="text-[10px] font-bold text-blue-500 px-2 py-1 bg-blue-50 rounded">저장</button>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex flex-col flex-1 pb-1 pr-10 relative">
-                                                                    <span className="font-bold text-[12px] text-gray-800">{c.author==='me'?'연지':'데이다라'}</span>
-                                                                    <span className="text-[12px] text-gray-600 break-words font-['Pretendard'] leading-tight whitespace-pre-wrap">{c.content}</span>
-                                                                </div>
-                                                            )}
-                                                            {(!editingCommentInfo || editingCommentInfo.postId !== post.id || editingCommentInfo.commentIndex !== i) && (
-                                                                <div className="absolute right-0 top-0.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button onClick={() => setEditingCommentInfo({ postId: post.id, commentIndex: i, text: c.content })} className="text-gray-300 hover:text-blue-500"><div className="w-3.5 h-3.5"><IconEdit /></div></button>
-                                                                    <button onClick={() => handleDeleteComment(post.id, c)} className="text-gray-300 hover:text-red-500"><div className="w-3.5 h-3.5"><IconTrash /></div></button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <div className="flex gap-2 mt-2 items-center">
-                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post)} />
-                                                    <button disabled={isPosting} onClick={()=>handleAddComment(post)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-600 hover:bg-gray-300'} disabled:opacity-50`}>게시</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                        ) : (
+                            <div className="p-4 text-center text-gray-400 mt-10">채팅 목록은 친구 탭에서 데이다라를 눌러 시작하세요.</div>
                         )}
                     </main>
-
-                    <nav className="absolute bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center h-[70px] pb-safe z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.02)]">
-                        <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition-colors ${activeTab==='friends'?'text-gray-900':'text-gray-400'}`}><svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab==='friends'?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span className="text-[10px] font-semibold">친구</span></div>
-                        <div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition-colors ${activeTab==='chat'?'text-gray-900':'text-gray-400'}`}><svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab==='chat'?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span className="text-[10px] font-semibold tracking-tighter">채팅</span></div>
-                        <div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1 cursor-pointer w-full h-full justify-center transition-colors ${activeTab==='feed'?'text-gray-900':'text-gray-400'}`}><svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab==='feed'?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg><span className="text-[10px] font-semibold tracking-tighter">게시물</span></div>
+                    <nav className="h-16 border-t flex justify-around items-center bg-gray-50 pb-safe">
+                        <button onClick={()=>setActiveTab('friends')} className={activeTab==='friends'?'font-bold':''}>친구</button>
+                        <button onClick={()=>setActiveTab('chat')} className={activeTab==='chat'?'font-bold':''}>채팅</button>
                     </nav>
                 </div>
             );
         }
 
-        const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
-            const isMe = profileTarget === 'me';
-            const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
-            return (
-                <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? myBgImgUrl : bgImgUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                    <div className="absolute inset-0 bg-black/40 z-0"></div>
-                    <div className="flex justify-between p-4 z-10">
-                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); window.history.back(); }} className="text-white p-2 hover:bg-white/20 rounded-full transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                        {!isEditingProfile && <button onClick={() => { setIsEditingProfile(true); window.history.pushState({ page: 'modal' }, ''); }} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
-                    </div>
-                    <div className="flex flex-col items-center pb-10 text-white z-10 mt-auto w-full px-6">
-                        {isEditingProfile && <div className="absolute top-16 right-4"><input type="file" accept="image/*" onChange={(e) => handleImageUploadUI(e, 'bg', isMe ? 'me' : 'deidara')} id="bg-edit-upload" className="hidden" /><label htmlFor="bg-edit-upload" className="bg-black/50 text-white px-3 py-1.5 rounded-full text-xs cursor-pointer border border-white/20">배경 변경</label></div>}
-                        <div onClick={() => { if(!isEditingProfile) { setShowFullImage(isMe ? myProfileImgUrl : profileImgUrl); window.history.pushState({ page: 'modal' }, ''); } }} className="w-24 h-24 rounded-[36px] bg-white/20 flex items-center justify-center text-5xl shadow-2xl mb-4 border-2 border-white/30 relative overflow-hidden backdrop-blur-sm cursor-pointer">
-                            {(isMe ? myProfileImgUrl : profileImgUrl) ? <img src={isMe ? myProfileImgUrl : profileImgUrl} className="w-full h-full object-cover" /> : <DefaultAvatar />}
-                            {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer">📷</label>}
-                            {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
-                        </div>
-                        <h2 className="text-2xl font-extrabold mb-1 text-shadow">{isMe ? '연지' : '데이다라'}</h2>
-                        <div className="w-full max-w-[280px] text-center mb-8 mt-2">
-                            {isEditingProfile && isMe ? <input type="text" value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2 text-sm text-white text-center shadow-inner" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-4 py-1.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
-                        </div>
-                        <div className="w-full max-w-[280px] border-t border-white/30 pt-6 flex justify-around">
-                            {isEditingProfile ? <button onClick={() => { if(isMe) { setMyStatus(editStatus); localStorage.setItem('my_status', editStatus); } window.history.back(); }} className="bg-[#FEE500] text-gray-900 font-bold px-8 py-2.5 rounded-full w-full">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); window.history.back(); }}><div className="text-white">💬</div><span className="text-[11px] font-semibold tracking-wider text-shadow">1:1 채팅</span></div>}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
