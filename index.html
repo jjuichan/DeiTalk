@@ -287,14 +287,40 @@
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 for (let attempt = 0; attempt < 5; attempt++) {
                     try {
-                        // 🌟 백그라운드에서도 작업을 멈추지 않도록 while(document.hidden) 일시정지 로직 완전 제거
                         const response = await fetch(url, {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: customPrompt }] } })
+                            body: JSON.stringify({ 
+                                contents, 
+                                systemInstruction: { parts: [{ text: customPrompt }] },
+                                // 🌟 검열/필터링 완화 설정 (틱틱대는 말투가 폭력성으로 차단되는 것 방지)
+                                safetySettings: [
+                                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                                ]
+                            })
                         });
+                        
                         const data = await response.json();
-                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "음... 뭐라고?";
-                    } catch (err) { await new Promise(r => setTimeout(r, 1500)); }
+
+                        // 🌟 HTTP 에러 (제한 초과 등) 발생 시 강제로 에러를 던져 재시도하게 함
+                        if (!response.ok) {
+                            console.error("API 에러 발생:", data);
+                            throw new Error(data.error?.message || "API Error");
+                        }
+                        
+                        // 🌟 검열 등으로 후보가 아예 없을 경우의 처리
+                        if (!data.candidates || data.candidates.length === 0) {
+                            console.warn("API 답변 생성 거부(필터링 등):", data);
+                            return "(말문이 막힌 듯하다. - 구글 API 검열 또는 생성 오류)";
+                        }
+
+                        return data.candidates[0].content.parts[0].text;
+                    } catch (err) { 
+                        console.error(`API 호출 실패 (${attempt + 1}/5):`, err);
+                        await new Promise(r => setTimeout(r, 1500)); 
+                    }
                 }
                 return "통신 장애 났다. 음!";
             };
