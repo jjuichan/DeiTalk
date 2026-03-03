@@ -372,25 +372,41 @@
                 e.target.value = ''; // 같은 파일을 다시 선택할 수 있도록 초기화
             };
 
-            // 🌟 피드 대댓글 및 빈 댓글 처리
-            const handleAddComment = async (postId, postContent) => {
+            // 🌟 피드 대댓글 및 빈 댓글 처리 (기존 대화 맥락 포함)
+            const handleAddComment = async (post) => {
+                const postId = post.id;
+                const postContent = post.content;
                 const commentText = commentInputs[postId]?.trim(); 
                 const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
                 
+                // 기존 댓글 내역을 문자열로 만들어 프롬프트에 제공
+                let contextStr = `[피드 원문]\n"${postContent}"\n\n[이전 댓글 내역]\n`;
+                if (post.comments && post.comments.length > 0) {
+                    // 너무 길어지는 것을 방지하기 위해 최근 10개만 참조
+                    post.comments.slice(-10).forEach(c => {
+                        contextStr += `${c.author === 'me' ? '연지' : '데이다라'}: ${c.content}\n`;
+                    });
+                } else {
+                    contextStr += "없음\n";
+                }
+
                 if (!commentText) {
-                    // 빈 댓글 전송 시 데이다라가 먼저 댓글 달게끔 처리
+                    // 빈 댓글 전송 시 (데이다라가 맥락을 이어서 대답함)
                     setIsPosting(true);
-                    const prompt = `${SYSTEM_PROMPT}\n연지가 쓴 피드 글: "${postContent}"\n이 글에 네가 틱틱거리며 참견하는 짧은 댓글을 하나 더 달아봐.`;
-                    const resp = await fetchAPI([{role:'user', parts:[{text:'댓글 하나 더 달아줘'}]}], prompt);
+                    const prompt = `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 아무런 대답 없이 가만히 있어. 위 맥락을 파악해서, 네가 먼저 틱틱거리며 한 마디 더 참견하거나 말을 이어가는 대댓글을 달아봐.`;
+                    const resp = await fetchAPI([{role:'user', parts:[{text:'이어서 대댓글을 달아줘'}]}], prompt);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                     setIsPosting(false);
                     return;
                 }
 
-                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'me', content: commentText, createdAt: Date.now() }) });
+                // 일반 댓글 전송 시 (맥락을 파악하고 대답함)
+                const myNewComment = { author: 'me', content: commentText, createdAt: Date.now() };
+                await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion(myNewComment) });
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
                 setIsPosting(true);
-                const prompt = `${SYSTEM_PROMPT}\n피드 글: "${postContent}"\n연지의 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글(답글) 달아줘.`;
+                
+                const prompt = `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n이전 맥락과 대화의 흐름을 잘 파악해서, 연지의 새 댓글에 틱틱거리며 받아치는 대댓글을 달아줘.`;
                 const resp = await fetchAPI([{role:'user', parts:[{text:'대댓글 달아줘'}]}], prompt);
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 setIsPosting(false);
@@ -612,8 +628,8 @@
                                                     ))}
                                                 </div>
                                                 <div className="flex gap-2 mt-2 items-center">
-                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id, post.content)} />
-                                                    <button disabled={isPosting} onClick={()=>handleAddComment(post.id, post.content)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-600 hover:bg-gray-300'} disabled:opacity-50`}>게시</button>
+                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post)} />
+                                                    <button disabled={isPosting} onClick={()=>handleAddComment(post)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-600 hover:bg-gray-300'} disabled:opacity-50`}>게시</button>
                                                 </div>
                                             </div>
                                         </div>
