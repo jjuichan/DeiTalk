@@ -556,7 +556,7 @@
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
                 setIsPosting(true);
                 
-                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글을 달아줘.` }];
+                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 네 성격에 맞는 반응으로 대댓글을 달아줘.` }];
                 if (post.imageUrl) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: post.imageUrl.split(',')[1] } });
 
                 const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
