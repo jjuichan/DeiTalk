@@ -248,15 +248,23 @@
             const handleAddPost = async () => {
                 if (!postInput.trim() || !user || !db) return;
                 setIsPosting(true);
-                const { collection, addDoc, serverTimestamp } = window.firebaseAPI;
+                const { collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
                 try {
-                    await addDoc(collection(db, `users/${user.uid}/posts`), {
+                    const myContent = postInput;
+                    const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), {
                         author: 'me',
-                        content: postInput,
+                        content: myContent,
                         createdAt: serverTimestamp(),
                         comments: []
                     });
                     setPostInput('');
+
+                    // 🌟 게시글 작성 후 데이다라 자동 댓글 추가
+                    const prompt = `${SYSTEM_PROMPT}\n연지가 막 피드에 "${myContent}"라고 글을 올렸어. 네가 제일 먼저 틱틱거리면서 관심 없는 척 짧게(1~2문장) 댓글을 달아봐.`;
+                    const resp = await fetchAPI([{role:'user', parts:[{text:'피드에 댓글 달아줘'}]}], prompt);
+                    await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), {
+                        comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() })
+                    });
                 } catch (e) {
                     console.error("게시물 업로드 실패:", e);
                 } finally {
@@ -298,14 +306,25 @@
                 e.target.value = ''; // 같은 파일을 다시 선택할 수 있도록 초기화
             };
 
-            const handleAddComment = async (postId) => {
-                const commentText = commentInputs[postId]?.trim(); if (!commentText) return;
-                const { doc: fdoc, updateDoc, arrayUnion, getDoc: fgetDoc } = window.firebaseAPI;
+            const handleAddComment = async (postId, postContent) => {
+                const commentText = commentInputs[postId]?.trim(); 
+                const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
+                
+                if (!commentText) {
+                    // 🌟 빈 댓글 전송 시 데이다라가 먼저 댓글 달게끔 처리
+                    setIsPosting(true);
+                    const prompt = `${SYSTEM_PROMPT}\n연지가 쓴 피드 글: "${postContent}"\n이 글에 네가 틱틱거리며 참견하는 짧은 댓글을 하나 더 달아봐.`;
+                    const resp = await fetchAPI([{role:'user', parts:[{text:'댓글 하나 더 달아줘'}]}], prompt);
+                    await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                    setIsPosting(false);
+                    return;
+                }
+
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'me', content: commentText, createdAt: Date.now() }) });
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
                 setIsPosting(true);
-                const prompt = `${SYSTEM_PROMPT}\n연지의 댓글: "${commentText}"에 틱틱거리며 답글 달아줘.`;
-                const resp = await fetchAPI([{role:'user', parts:[{text:'댓글 달아줘'}]}], prompt);
+                const prompt = `${SYSTEM_PROMPT}\n피드 글: "${postContent}"\n연지의 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글(답글) 달아줘.`;
+                const resp = await fetchAPI([{role:'user', parts:[{text:'대댓글 달아줘'}]}], prompt);
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 setIsPosting(false);
             };
@@ -424,10 +443,27 @@
 
                     <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
                         {activeTab === 'friends' && (
-                            <div className="flex-1 p-4 space-y-6 bg-white">
-                                <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100"><div className="w-14 h-14 rounded-[20px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div><div className="flex-1"><h3 className="font-bold text-gray-800">연지</h3><p className="text-xs text-gray-500 mt-0.5">{myStatus}</p></div></div>
-                                <div className="h-px bg-gray-100 w-full opacity-50"></div>
-                                <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100"><div className="w-12 h-12 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div><div className="flex-1 min-w-0"><h3 className="font-bold text-gray-800">데이다라</h3><p className="text-xs text-gray-500 mt-0.5 truncate">{deidaraStatus}</p></div></div>
+                            <div className="flex-1 bg-gray-50 flex flex-col">
+                                <div className="bg-white px-4 py-3 mb-2 shadow-sm border-b border-gray-100">
+                                    <div className="text-xs font-bold text-gray-400 mb-2 ml-1">내 프로필</div>
+                                    <div onClick={() => { setProfileTarget('me'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
+                                        <div className="w-16 h-16 rounded-[22px] bg-white border flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div>
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-gray-800 text-lg">연지</h3>
+                                            <p className="text-sm text-gray-500 mt-0.5">{myStatus}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white px-4 py-3 flex-1 shadow-sm border-t border-gray-100">
+                                    <div className="text-xs font-bold text-gray-400 mb-2 ml-1">친구 1</div>
+                                    <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors active:bg-gray-100">
+                                        <div className="w-14 h-14 rounded-2xl bg-white border flex items-center justify-center text-xl overflow-hidden flex-shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-gray-800 text-base">데이다라</h3>
+                                            <p className="text-sm text-gray-500 mt-0.5 truncate">{deidaraStatus}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                         {activeTab === 'chat' && (
@@ -469,7 +505,8 @@
                                                     ))}
                                                 </div>
                                                 <div className="flex gap-2 mt-2 items-center">
-                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id)} /><button onClick={()=>handleAddComment(post.id)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-500'}`}>게시</button>
+                                                    <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post.id, post.content)} />
+                                                    <button disabled={isPosting} onClick={()=>handleAddComment(post.id, post.content)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-600 hover:bg-gray-300'} disabled:opacity-50`}>게시</button>
                                                 </div>
                                             </div>
                                         </div>
