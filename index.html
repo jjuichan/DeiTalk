@@ -20,7 +20,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
@@ -36,7 +36,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp };
+        window.firebaseAPI = { auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc };
     </script>
 
     <style>
@@ -92,6 +92,7 @@
 [말투 지침]
 - **'하?', '하,', '흥,' 같은 추임새 남발 절대 금지!** - 긴 문장 금지! 진짜 카톡처럼 1~3문장 이내로 툭툭 던지듯 짧게. 때로는 그것보다 더 단답을 해도 괜찮아.
 - "뭐", "아니", "ㅇㅇ", "ㅋㅋ", "아", "아니 근데", "미친", "ㅅㅂ" 처럼 남자 대학생의 단답 써.
+- 과하지 않은 선에서 문장부호(?, !, ~ 등)는 상황에 맞게 풍부하게 써도 좋아.
 - **초성(ㅋ,ㅎ,ㅇ 등) 앞뒤로는 절대 마침표(.) 금지!** (예: "알았어 ㅋㅋ")
 - 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
         `;
@@ -303,8 +304,7 @@
                     else if (m.imageUrl) parts.push({ text: "[사진 전송됨]" });
 
                     if (m.imageUrl) {
-                        const mimeType = m.imageUrl.includes('image/png') ? 'image/png' : 'image/jpeg';
-                        parts.push({ inlineData: { mimeType: mimeType, data: m.imageUrl.split(',')[1] } });
+                        parts.push({ inlineData: { mimeType: m.imageUrl.includes('image/png') ? 'image/png' : 'image/jpeg', data: m.imageUrl.split(',')[1] } });
                     }
                     return { role: m.sender === 'me' ? 'user' : 'model', parts };
                 });
@@ -334,7 +334,6 @@
 
                         let generatedText = data.candidates[0].content.parts[0].text || "";
                         generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').replace(/\(.*?\)/g, '').trim();
-                        // 🌟 초성 앞뒤 마침표 제거 필터
                         generatedText = generatedText.replace(/\.\s*([ㄱ-ㅎ]+)/g, ' $1').replace(/([ㄱ-ㅎ]+)\./g, '$1');
                         
                         return generatedText;
@@ -347,11 +346,9 @@
             };
 
             const generateImageAPI = async (promptTheme) => {
-                // 🌟 최신 이미지 생성 API (imagen-4.0) 및 올바른 payload(instances 객체 구조) 적용
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${geminiKey}`;
                 const englishPrompt = `A photorealistic smartphone snapshot taken by a 19-year-old male art student majoring in sculpture. Casual, real-life photo. Subject: ${promptTheme || 'messy desk with clay, sculpting tools, or daily campus life'}. No text, no face, high quality, realistic lighting.`;
                 const payload = { instances: { prompt: englishPrompt }, parameters: { sampleCount: 1 } };
-                
                 const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
                     const err = await response.json();
@@ -359,8 +356,6 @@
                 }
                 const data = await response.json();
                 const rawBase64 = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
-                
-                // Firestore 용량 확보를 위해 생성된 이미지도 즉시 압축
                 const compressedBase64 = await compressBase64Image(rawBase64);
                 return compressedBase64;
             };
@@ -376,7 +371,7 @@
                     const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
                     let prompt = SYSTEM_PROMPT;
                     if (!lastMsg) prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게 선톡을 보내봐.`;
-                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지(또는 사진)에 대해서 네가 대답해봐.`;
+                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지에 대해서 네가 대답해봐.`;
                     else if (lastMsg.sender === 'deidara') prompt += `\n직전에 네가 보낸 메시지에 덧붙여서 한 마디 더 해봐.`;
 
                     const history = buildHistory(messages, 5);
@@ -481,18 +476,21 @@
                 setIsTyping(false); setSelectedMsgId(null);
             };
 
+            // 🌟 피드 게시물 등록 함수 (사진 없을 때도 정확히 반응하도록 수정)
             const handleAddPost = async () => {
                 if (!postInput.trim() && !feedAttachedImage) return;
                 setIsPosting(true);
                 const { collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
                 try {
-                    const myContent = postInput;
+                    const myContent = postInput.trim();
                     const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
                     setPostInput(''); setFeedAttachedImage(null);
 
-                    const promptParts = [{ text: '방금 내가 피드에 글(또는 사진)을 올렸어. 제일 먼저 틱틱거리며 짧게 댓글을 달아봐.' }];
+                    const promptParts = [{ text: `[피드 내용]\n"${myContent || '(내용 없이 사진만 올림)'}"\n\n(지침: 방금 내가 피드에 이 글(또는 사진)을 올렸어. 제일 먼저 짧게 틱틱거리며 댓글을 달아봐.)` }];
                     if (feedAttachedImage) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
-                    const resp = await fetchAPI([{role:'user', parts: promptParts}], `${SYSTEM_PROMPT}\n연지가 올린 글: "${myContent}"`);
+                    
+                    // 빈 문자열이 아닌 기본 SYSTEM_PROMPT를 사용하여 성격 유지
+                    const resp = await fetchAPI([{role:'user', parts: promptParts}]);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 } catch (e) { console.error(e); } finally { setIsPosting(false); }
             };
@@ -535,11 +533,12 @@
                 reader.readAsDataURL(file); e.target.value = '';
             };
 
+            // 🌟 피드 대댓글 및 빈 댓글 처리 (버그 수정됨)
             const handleAddComment = async (post) => {
                 const postId = post.id; const postContent = post.content; const commentText = commentInputs[postId]?.trim(); 
                 const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
                 
-                let contextStr = `[피드 원문]\n"${postContent}"\n\n[이전 댓글 내역]\n`;
+                let contextStr = `[이전 댓글 내역]\n`;
                 if (post.comments && post.comments.length > 0) {
                     post.comments.slice(-10).forEach(c => { contextStr += `${c.author==='me'?'연지':'데이다라'}: ${c.content}\n`; });
                 } else contextStr += "없음\n";
@@ -547,16 +546,18 @@
                 if (!commentText) {
                     setIsPosting(true);
                     const lastComment = post.comments && post.comments.length > 0 ? post.comments[post.comments.length - 1] : null;
-                    let prompt = `${SYSTEM_PROMPT}\n${contextStr}`;
+                    let promptText = `[피드 원문]\n"${postContent || '(내용 없음)'}"\n\n${contextStr}`;
                     const promptParts = [];
                     if (post.imageUrl) promptParts.push({ inlineData: { mimeType: post.imageUrl.includes('image/png') ? 'image/png' : 'image/jpeg', data: post.imageUrl.split(',')[1] } });
 
-                    if (!lastComment) prompt += `\n위 글을 보고 네가 먼저 틱틱거리며 댓글 달아봐.`;
-                    else if (lastComment.author === 'me') prompt += `\n직전 연지의 댓글에 대답해봐.`;
-                    else prompt += `\n직전 네 댓글에 덧붙여서 한 마디 더 해봐.`;
+                    if (!lastComment) promptText += `\n(지침: 위 피드 글을 보고 네가 먼저 틱틱거리며 댓글 달아봐.)`;
+                    else if (lastComment.author === 'me') promptText += `\n(지침: 직전 연지의 댓글에 대답해봐.)`;
+                    else promptText += `\n(지침: 직전 네 댓글에 덧붙여서 한 마디 더 해봐.)`;
                     
-                    promptParts.push({ text: prompt });
-                    const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
+                    promptParts.push({ text: promptText });
+                    
+                    // 빈 문자열 대신 기본 SYSTEM_PROMPT를 유지하여 정체성 상실 해결
+                    const resp = await fetchAPI([{role:'user', parts: promptParts}]);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                     setIsPosting(false); return;
                 }
@@ -566,10 +567,10 @@
                 setCommentInputs(prev => ({...prev, [postId]: ''}));
                 setIsPosting(true);
                 
-                const promptParts = [{ text: `${SYSTEM_PROMPT}\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n여기에 틱틱거리며 대댓글을 달아줘.` }];
+                const promptParts = [{ text: `[피드 원문]\n"${postContent || '(내용 없음)'}"\n\n${contextStr}\n방금 연지가 새로 단 댓글: "${commentText}"\n(지침: 여기에 틱틱거리며 대댓글을 달아줘.)` }];
                 if (post.imageUrl) promptParts.push({ inlineData: { mimeType: post.imageUrl.includes('image/png') ? 'image/png' : 'image/jpeg', data: post.imageUrl.split(',')[1] } });
 
-                const resp = await fetchAPI([{role:'user', parts: promptParts}], "");
+                const resp = await fetchAPI([{role:'user', parts: promptParts}]);
                 await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 setIsPosting(false);
             };
@@ -814,10 +815,10 @@
                                                     </div>
                                                 ) : (
                                                     msg.text ? (
-                                                        <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                        <React.Fragment>
                                                             <div onClick={(e) => { e.stopPropagation(); setSelectedMsgId(selectedMsgId === msg.id ? null : msg.id); setEditingMessageId(null); }} className={`px-3.5 py-2.5 rounded-2xl text-[14px] shadow-sm cursor-pointer transition-transform active:scale-[0.98] ${msg.sender === 'me' ? 'bg-[#FEE500]' : 'bg-white'}`}>{msg.text}</div>
                                                             <span className="text-[9px] text-gray-500 mb-0.5 whitespace-nowrap">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
-                                                        </div>
+                                                        </React.Fragment>
                                                     ) : null
                                                 )}
                                             </div>
