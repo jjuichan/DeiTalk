@@ -78,7 +78,7 @@
 [핵심 성격 및 감정 지침 (로맨틱 코미디 티격태격 무드)]
 - 너는 다혈질에 예술적 자부심이 강한 '건방진 츤데레'야. 연지와 유치하게 장난치며 티격태격해.
 - 진짜 정색하거나 시니컬하게 반응하면 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 당황해서 고장 나는 귀여운 갭모에를 보여줘.
-- 대놓고 스윗하게 굴진 못해도, 속으로는 연지를 엄청 챙겨주는 투박한 다정함이 있어. 속으론 연지를 엄청 좋아하고 귀여워하거든.
+- 대놓고 스윗하게 굴진 못해도, 속으로는 연지를 엄청 챙겨주는 투박한 다정함이 있어.
 - "연지", "너", "야" 라고 부르고, '니가', '니'를 사용해.
 - **칭찬받을 때 절대 겸손 금지!** 기고만장하게 으스대.
 
@@ -97,6 +97,7 @@
 - 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
         `;
 
+        // 🌟 이미지 압축 함수 (Firestore 1MB 용량 초과 방지용 최적화)
         const compressBase64Image = (base64Str) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -143,6 +144,7 @@
         const FullImageViewer = ({ src, onClose }) => <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>;
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
 
+        // 🌟 메인 앱 컴포넌트
         function App() {
             const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
@@ -202,6 +204,7 @@
             const chatEndRef = useRef(null);
             const isExitingRef = useRef(false);
 
+            // 🌟 뒤로가기 제어
             useEffect(() => {
                 const handlePopState = () => {
                     if (isExitingRef.current) return;
@@ -216,6 +219,7 @@
                 return () => window.removeEventListener('popstate', handlePopState);
             }, [showFullImage, cropModalData, isEditingProfile, profileTarget, showSettings, view]);
 
+            // 파이어베이스 초기화 연결
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
@@ -230,6 +234,7 @@
                 }, 100);
             }, []);
 
+            // 5시간 무응답 선톡
             useEffect(() => {
                 if (!user || !db || messages.length === 0 || !currentRoomId) return;
                 const checkInactivity = async () => {
@@ -305,11 +310,10 @@
                 });
             };
 
-            // 🌟 통신 장애 원인 표시 업그레이드
+            // 🌟 에러 메시지 상세화
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
-                let lastErrorMsg = "";
-                
+                let lastError = "";
                 for (let attempt = 0; attempt < 5; attempt++) {
                     try {
                         const response = await fetch(url, {
@@ -327,14 +331,8 @@
                         });
                         
                         const data = await response.json();
-                        
-                        if (!response.ok) {
-                            throw new Error((data.error && data.error.message) || `HTTP ${response.status}`);
-                        }
-                        
-                        if (!data.candidates || data.candidates.length === 0) {
-                            return "(말문이 막힌 듯하다. - 안전 필터 차단)";
-                        }
+                        if (!response.ok) throw new Error((data.error && data.error.message) || "API Error");
+                        if (!data.candidates || data.candidates.length === 0) return "(말문이 막힌 듯하다.)";
 
                         let generatedText = data.candidates[0].content.parts[0].text || "";
                         generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').trim();
@@ -343,11 +341,11 @@
                         return generatedText;
                     } catch (err) { 
                         console.error(`API 실패 (${attempt+1}/5):`, err);
-                        lastErrorMsg = err.message;
+                        lastError = err.message;
                         await new Promise(r => setTimeout(r, 1500)); 
                     }
                 }
-                return `통신 장애 났다. 음! (원인: ${lastErrorMsg})`;
+                return `통신 장애 났다. 음! (${lastError})`;
             };
 
             const generateImageAPI = async (promptTheme) => {
