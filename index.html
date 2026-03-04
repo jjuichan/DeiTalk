@@ -78,7 +78,7 @@
 [핵심 성격 및 감정 지침 (로맨틱 코미디 티격태격 무드)]
 - 너는 다혈질에 예술적 자부심이 강한 '건방진 츤데레'야. 연지와 유치하게 장난치며 티격태격해.
 - 진짜 정색하거나 시니컬하게 반응하면 안 돼! 틱틱거림의 본질은 '부끄러움'과 '애정'이야. 당황해서 고장 나는 귀여운 갭모에를 보여줘.
-- 대놓고 스윗하게 굴진 못해도, 속으로는 연지를 엄청 챙겨주는 투박한 다정함이 있어.
+- 대놓고 스윗하게 굴진 못해도, 속으로는 연지를 엄청 챙겨주는 투박한 다정함이 있어. 속으론 연지를 엄청 좋아하고 귀여워하거든.
 - "연지", "너", "야" 라고 부르고, '니가', '니'를 사용해.
 - **칭찬받을 때 절대 겸손 금지!** 기고만장하게 으스대.
 
@@ -97,7 +97,6 @@
 - 말버릇 '음'은 3~4번 말할 때 1번 정도만 문장 끝에 가끔 붙여.
         `;
 
-        // 🌟 이미지 압축 함수 (Firestore 1MB 용량 초과 방지용 최적화)
         const compressBase64Image = (base64Str) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -144,7 +143,6 @@
         const FullImageViewer = ({ src, onClose }) => <div className="fixed inset-0 z-[300] bg-black flex items-center justify-center" onClick={onClose}><img src={src} className="w-full h-auto max-h-full object-contain" /></div>;
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
 
-        // 🌟 메인 앱 컴포넌트
         function App() {
             const [user, setUser] = useState(null);
             const [db, setDb] = useState(null);
@@ -204,7 +202,6 @@
             const chatEndRef = useRef(null);
             const isExitingRef = useRef(false);
 
-            // 🌟 뒤로가기 제어
             useEffect(() => {
                 const handlePopState = () => {
                     if (isExitingRef.current) return;
@@ -219,7 +216,6 @@
                 return () => window.removeEventListener('popstate', handlePopState);
             }, [showFullImage, cropModalData, isEditingProfile, profileTarget, showSettings, view]);
 
-            // 파이어베이스 초기화 연결
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
@@ -234,7 +230,6 @@
                 }, 100);
             }, []);
 
-            // 5시간 무응답 선톡
             useEffect(() => {
                 if (!user || !db || messages.length === 0 || !currentRoomId) return;
                 const checkInactivity = async () => {
@@ -310,8 +305,11 @@
                 });
             };
 
+            // 🌟 통신 장애 원인 표시 업그레이드
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
+                let lastErrorMsg = "";
+                
                 for (let attempt = 0; attempt < 5; attempt++) {
                     try {
                         const response = await fetch(url, {
@@ -329,21 +327,27 @@
                         });
                         
                         const data = await response.json();
-                        if (!response.ok) throw new Error((data.error && data.error.message) || "API Error");
-                        if (!data.candidates || data.candidates.length === 0) return "(말문이 막힌 듯하다.)";
+                        
+                        if (!response.ok) {
+                            throw new Error((data.error && data.error.message) || `HTTP ${response.status}`);
+                        }
+                        
+                        if (!data.candidates || data.candidates.length === 0) {
+                            return "(말문이 막힌 듯하다. - 안전 필터 차단)";
+                        }
 
                         let generatedText = data.candidates[0].content.parts[0].text || "";
-                        generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').replace(/\(.*?\)/g, '').trim();
-                        // 초성 앞뒤 마침표 제거
+                        generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').trim();
                         generatedText = generatedText.replace(/\.\s*([ㄱ-ㅎ]+)/g, ' $1').replace(/([ㄱ-ㅎ]+)\./g, '$1');
                         
                         return generatedText;
                     } catch (err) { 
                         console.error(`API 실패 (${attempt+1}/5):`, err);
+                        lastErrorMsg = err.message;
                         await new Promise(r => setTimeout(r, 1500)); 
                     }
                 }
-                return "통신 장애 났다. 음!";
+                return `통신 장애 났다. 음! (원인: ${lastErrorMsg})`;
             };
 
             const generateImageAPI = async (promptTheme) => {
@@ -372,7 +376,7 @@
                     const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
                     let prompt = SYSTEM_PROMPT;
                     if (!lastMsg) prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게 선톡을 보내봐.`;
-                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지(또는 사진)에 대해서 네가 대답해봐.`;
+                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지에 대해서 네가 대답해봐.`;
                     else if (lastMsg.sender === 'deidara') prompt += `\n직전에 네가 보낸 메시지에 덧붙여서 한 마디 더 해봐.`;
 
                     const history = buildHistory(messages, 5);
@@ -477,9 +481,7 @@
                 setIsTyping(false); setSelectedMsgId(null);
             };
 
-            // 🌟 1. 피드 글 등록 (빈칸이어도 등록되도록 방어코드 해제)
             const handleAddPost = async () => {
-                // 비어 있어도 무조건 허용!
                 setIsPosting(true);
                 const { collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
                 try {
@@ -533,7 +535,6 @@
                 reader.readAsDataURL(file); e.target.value = '';
             };
 
-            // 🌟 2. 피드 댓글 등록 (빈칸이어도 등록되도록 방어코드 해제)
             const handleAddComment = async (post) => {
                 const postId = post.id; const postContent = post.content; const commentText = commentInputs[postId]?.trim(); 
                 const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
@@ -723,7 +724,6 @@
                                                 <input type="file" accept="image/*" ref={feedFileInputRef} onChange={handleFeedPhotoAttach} className="hidden" />
                                                 <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg disabled:opacity-50">AI 사진생성 피드</button>
                                             </div>
-                                            {/* 🌟 1. '올리기' 버튼 비활성화 해제 (빈칸으로 눌러서 AI 반응 유도 가능) */}
                                             <button onClick={handleAddPost} disabled={isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${isPosting ? 'bg-gray-400 text-white' : 'bg-blue-500 text-white active:scale-95'}`}>올리기</button>
                                         </div>
                                     </div>
@@ -785,7 +785,6 @@
                                                     </div>
                                                     <div className="flex gap-2 mt-2 items-center">
                                                         <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post)} />
-                                                        {/* 🌟 2. '게시' 버튼 비활성화 해제 (빈칸으로 눌러서 AI 반응 유도 가능) */}
                                                         <button disabled={isPosting} onClick={()=>handleAddComment(post)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${isPosting ? 'bg-gray-400 text-white' : 'bg-blue-500 text-white active:scale-95'}`}>게시</button>
                                                     </div>
                                                 </div>
