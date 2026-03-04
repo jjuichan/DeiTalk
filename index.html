@@ -334,6 +334,7 @@
 
                         let generatedText = data.candidates[0].content.parts[0].text || "";
                         generatedText = generatedText.replace(/\(버전\s*\d.*?\)/gi, '').replace(/\*\*버전\s*\d.*?\*\*/gi, '').replace(/\(.*?\)/g, '').trim();
+                        // 초성 앞뒤 마침표 제거
                         generatedText = generatedText.replace(/\.\s*([ㄱ-ㅎ]+)/g, ' $1').replace(/([ㄱ-ㅎ]+)\./g, '$1');
                         
                         return generatedText;
@@ -371,7 +372,7 @@
                     const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
                     let prompt = SYSTEM_PROMPT;
                     if (!lastMsg) prompt += `\n연지와의 채팅방에 들어왔어. 먼저 건방지게 선톡을 보내봐.`;
-                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지에 대해서 네가 대답해봐.`;
+                    else if (lastMsg.sender === 'me') prompt += `\n직전에 연지가 보낸 메시지(또는 사진)에 대해서 네가 대답해봐.`;
                     else if (lastMsg.sender === 'deidara') prompt += `\n직전에 네가 보낸 메시지에 덧붙여서 한 마디 더 해봐.`;
 
                     const history = buildHistory(messages, 5);
@@ -476,9 +477,9 @@
                 setIsTyping(false); setSelectedMsgId(null);
             };
 
-            // 🌟 피드 게시물 등록 함수 (사진 없을 때도 정확히 반응하도록 수정)
+            // 🌟 1. 피드 글 등록 (빈칸이어도 등록되도록 방어코드 해제)
             const handleAddPost = async () => {
-                if (!postInput.trim() && !feedAttachedImage) return;
+                // 비어 있어도 무조건 허용!
                 setIsPosting(true);
                 const { collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
                 try {
@@ -486,10 +487,9 @@
                     const docRef = await addDoc(collection(db, `users/${user.uid}/posts`), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
                     setPostInput(''); setFeedAttachedImage(null);
 
-                    const promptParts = [{ text: `[피드 내용]\n"${myContent || '(내용 없이 사진만 올림)'}"\n\n(지침: 방금 내가 피드에 이 글(또는 사진)을 올렸어. 제일 먼저 짧게 틱틱거리며 댓글을 달아봐.)` }];
+                    const promptParts = [{ text: `[피드 내용]\n"${myContent || '(내용 없음)'}"\n\n(지침: 방금 내가 피드에 이 글(또는 사진)을 올렸어. 제일 먼저 짧게 틱틱거리며 댓글을 달아봐.)` }];
                     if (feedAttachedImage) promptParts.push({ inlineData: { mimeType: "image/jpeg", data: feedAttachedImage.split(',')[1] } });
                     
-                    // 빈 문자열이 아닌 기본 SYSTEM_PROMPT를 사용하여 성격 유지
                     const resp = await fetchAPI([{role:'user', parts: promptParts}]);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 } catch (e) { console.error(e); } finally { setIsPosting(false); }
@@ -533,7 +533,7 @@
                 reader.readAsDataURL(file); e.target.value = '';
             };
 
-            // 🌟 피드 대댓글 및 빈 댓글 처리 (버그 수정됨)
+            // 🌟 2. 피드 댓글 등록 (빈칸이어도 등록되도록 방어코드 해제)
             const handleAddComment = async (post) => {
                 const postId = post.id; const postContent = post.content; const commentText = commentInputs[postId]?.trim(); 
                 const { doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
@@ -556,7 +556,6 @@
                     
                     promptParts.push({ text: promptText });
                     
-                    // 빈 문자열 대신 기본 SYSTEM_PROMPT를 유지하여 정체성 상실 해결
                     const resp = await fetchAPI([{role:'user', parts: promptParts}]);
                     await updateDoc(fdoc(db, `users/${user.uid}/posts/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                     setIsPosting(false); return;
@@ -724,7 +723,8 @@
                                                 <input type="file" accept="image/*" ref={feedFileInputRef} onChange={handleFeedPhotoAttach} className="hidden" />
                                                 <button onClick={handleDeidaraNewPost} disabled={isPosting} className="text-xs font-bold text-orange-500 px-3 py-2 bg-orange-50 rounded-lg disabled:opacity-50">AI 사진생성 피드</button>
                                             </div>
-                                            <button onClick={handleAddPost} disabled={(!postInput.trim() && !feedAttachedImage) || isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${((postInput.trim() || feedAttachedImage) && !isPosting) ? 'bg-blue-500 text-white active:scale-95' : 'bg-gray-200 text-gray-400'}`}>올리기</button>
+                                            {/* 🌟 1. '올리기' 버튼 비활성화 해제 (빈칸으로 눌러서 AI 반응 유도 가능) */}
+                                            <button onClick={handleAddPost} disabled={isPosting} className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${isPosting ? 'bg-gray-400 text-white' : 'bg-blue-500 text-white active:scale-95'}`}>올리기</button>
                                         </div>
                                     </div>
                                     <div className="space-y-3 px-3">
@@ -785,7 +785,8 @@
                                                     </div>
                                                     <div className="flex gap-2 mt-2 items-center">
                                                         <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글..." className="flex-1 bg-white border border-gray-100 rounded-lg px-3 py-1.5 text-xs outline-none shadow-inner" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post)} />
-                                                        <button disabled={isPosting} onClick={()=>handleAddComment(post)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${(commentInputs[post.id] || '').trim()?'bg-blue-500 text-white':'bg-gray-200 text-gray-600 hover:bg-gray-300'} disabled:opacity-50`}>게시</button>
+                                                        {/* 🌟 2. '게시' 버튼 비활성화 해제 (빈칸으로 눌러서 AI 반응 유도 가능) */}
+                                                        <button disabled={isPosting} onClick={()=>handleAddComment(post)} className={`font-bold text-xs px-3 py-1.5 rounded-lg transition-all ${isPosting ? 'bg-gray-400 text-white' : 'bg-blue-500 text-white active:scale-95'}`}>게시</button>
                                                     </div>
                                                 </div>
                                             </div>
