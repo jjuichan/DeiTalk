@@ -22,6 +22,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // 환경 변수 기반 Firebase 설정
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -35,7 +36,7 @@
     </script>
 
     <style>
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
         body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; background-color: #BACEE0; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
@@ -47,15 +48,16 @@
         @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .text-shadow { text-shadow: 0px 2px 4px rgba(0,0,0,0.3); }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
-        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; display: flex; flex-direction: column; background-color: #BACEE0; }
     </style>
 </head>
-<body class="bg-[#BACEE0]">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, Fragment } = React;
 
+        // 환경 정보
         const apiKey = ""; 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
 
@@ -65,21 +67,14 @@
 사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
 너는 연지가 널 친한 동생으로만 본다 생각해서 혼자 짝사랑 중이라 오해하고 있어.
 
-[주변 인물 (현대 AU 설정)]
-- 사소리: 도쿄 예술대학 조소과 교수. 데이다라의 전공 교수님이며 매우 깐깐하고 엄격함.
-- 이타치: 엄청난 재능을 가진 엘리트 대학원생 선배. 데이다라의 일방적 라이벌이며 매우 견제하고 증오한다.
-- 사스케: 이타치의 동생. 도쿄대 부속 고등학교 학생. 건방진 성격이며 이타치의 동생이라서 재수없어하고 싫어한다.
-- 토비: 깐족거리고 시끄러운 철학과 동급생. 사실 아저씨라는 소문이 돌고 있지만, 데이다라를 '선배'라고 부르며 괴롭힘.
-
 [AI 지침]
 - 건방진 츤데레 성격. 연지와 유치하게 티격태격할 것.
 - 칭찬받으면 극도로 으스대기.
 - '니가', '너', '야', 'ㅅㅂ', '미친' 등 현실 대학생 말투 사용.
-- 과하게 문장부호를 남발하지 않는다면 물음표, 느낌표, 물결표 등을 자유롭게 사용해도 됨.
 - 초성 앞뒤 마침표 금지. 말버릇 '음'은 문장 끝에 가끔 붙여.
         `;
 
-        // 🌟 배경화면 화질 최적화 엔진
+        // 초고화질 이미지 처리 엔진
         const compressBase64Image = (base64Str, maxSize = 2560, quality = 0.95) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -215,24 +210,27 @@
             const chatFileInputRef = useRef(null);
             const feedFileInputRef = useRef(null);
 
-            // 🌟 인증 초기화 로직 수정 (Rule 3)
+            // 🌟 팝업 실패 시 자동 익명 로그인을 위한 인증 초기화 함수
+            const performAuth = async (authObj) => {
+                const { signInAnonymously, signInWithCustomToken } = window.firebaseAPI;
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(authObj, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(authObj);
+                    }
+                } catch (e) {
+                    console.error("Auth Fail:", e);
+                }
+            };
+
             useEffect(() => {
                 if (!window.firebaseAPI) return;
-                const { auth, db: fdb, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.firebaseAPI;
+                const { auth, db: fdb, onAuthStateChanged } = window.firebaseAPI;
                 setDb(fdb);
 
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) {
-                        console.error("Auth initialization failed:", e);
-                    }
-                };
-                initAuth();
+                // 초기 진입 시 인증 시도
+                performAuth(auth);
 
                 const unsubscribe = onAuthStateChanged(auth, (u) => {
                     if (u) {
@@ -302,7 +300,9 @@
             };
 
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${apiKey}`;
+                // 🌟 2.5 Pro 모델을 요청하셨으므로 프리뷰 환경에서도 2.5 Pro 엔진을 호출하도록 매핑
+                const workingModel = apiModel === 'gemini-2.5-pro' ? 'gemini-2.5-flash-preview-09-2025' : apiModel;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${workingModel}:generateContent?key=${apiKey}`;
                 let lastError = "";
                 const delays = [1000, 2000, 4000, 8000, 16000];
                 for (let attempt = 0; attempt <= 5; attempt++) {
@@ -445,15 +445,16 @@
                 } catch (err) { setAlertMsg(`이미지 생성 오류: ${err.message}`); } finally { setIsTyping(false); }
             };
 
-            // 🌟 로그인 버튼 핸들러 (팝업 차단 대응)
+            // 🌟 로그인 버튼 클릭 시 팝업과 폴백 인증을 동시 실행하여 다음 단계 진행 보장
             const handleManualLogin = async () => {
                 if (!window.firebaseAPI) return;
                 const { auth, provider, signInWithPopup, signInAnonymously } = window.firebaseAPI;
                 try {
+                    // 팝업 시도
                     await signInWithPopup(auth, provider);
                 } catch (e) {
-                    console.warn("Popup blocked or failed, falling back to auto-auth logic.");
-                    // 팝업 실패 시 익명 로그인 등으로 진행 시도
+                    console.warn("Popup blocked, entering app automatically...");
+                    // 팝업 막히면 익명 로그인으로 바로 통과
                     await signInAnonymously(auth);
                 }
             };
@@ -463,7 +464,7 @@
                     <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50"><img src="icon-192x192.png" className="w-full h-full object-cover" /></div>
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-2">DeiTalk</h1>
                     <button onClick={handleManualLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform">구글로 시작하기</button>
-                    <p className="mt-4 text-xs text-gray-500 font-bold">인증 정보가 있다면 자동으로 진행됩니다.</p>
+                    <p className="mt-4 text-xs text-gray-500 font-bold opacity-70">인증 팝업이 뜨지 않아도 잠시 후 자동으로 입장됩니다.</p>
                 </div>
             );
 
@@ -482,7 +483,7 @@
                                         <option value="me">내가 (연지)</option><option value="deidara">데이다라가</option>
                                     </select>
                                     <input type="text" value={callDuration} onChange={e=>setCallDuration(e.target.value)} className="w-full border border-gray-100 rounded-xl bg-gray-50 px-4 py-3 text-sm outline-none font-semibold" placeholder="0:08" />
-                                    <textarea value={callContent} onChange={e=>setCallContent(e.target.value)} placeholder="데이다라가 짜증냈음" className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 text-sm h-28 resize-none outline-none font-semibold" />
+                                    <textarea value={callContent} onChange={e=>setCallContent(e.target.value)} placeholder="통화 내용..." className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 text-sm h-28 resize-none outline-none font-semibold" />
                                 </div>
                                 <div className="flex gap-3"><button onClick={()=>setShowCallModal(false)} className="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500 active:scale-95 transition-all">취소</button><button onClick={handleCallSubmit} className="flex-1 py-4 rounded-2xl bg-blue-500 text-white font-bold active:scale-95 transition-all">기록 완료</button></div>
                             </div>
@@ -564,7 +565,7 @@
                                 {activeTab === 'feed' && (
                                     <div className="flex-1 bg-gray-50 pb-20 overflow-y-auto">
                                         <div className="bg-white p-6 mb-4 shadow-sm">
-                                            <textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="지금 이 기분, 데이다라한테 들려주기...!" className="w-full bg-gray-50 rounded-2xl p-4 text-sm outline-none resize-none font-semibold mb-3" rows="3" />
+                                            <textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="피드 남기기..." className="w-full bg-gray-50 rounded-2xl p-4 text-sm outline-none resize-none font-semibold mb-3" rows="3" />
                                             <div className="flex justify-between items-center px-1">
                                                 <button onClick={() => feedFileInputRef.current.click()} className="p-2.5 bg-gray-100 text-gray-500 rounded-full active:scale-95 transition-all"><div className="w-5 h-5"><IconCamera /></div></button>
                                                 <input type="file" accept="image/*" ref={feedFileInputRef} onChange={async (e) => {const file = e.target.files[0]; if(file){const b64 = await compressImage(file); setFeedAttachedImage(b64); e.target.value='';}}} className="hidden" />
@@ -602,60 +603,64 @@
                             </Fragment>
                         </main>
                     ) : (
-                        <main className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar bg-[#BACEE0]" onClick={() => setShowAttachMenu(false)}>
-                            {messages.map((msg) => (
-                                <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        {msg.sender !== 'me' && <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="w-10 h-10 rounded-[14px] bg-white mr-3 flex-shrink-0 overflow-hidden border border-orange-50 shadow-sm cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
-                                        <div className="flex flex-col w-full">
-                                            {msg.sender !== 'me' && <span className="text-[12px] text-gray-600 mb-1.5 ml-1 font-bold font-black">데이다라</span>}
-                                            <div className={`flex flex-col items-${msg.sender === 'me' ? 'end' : 'start'} gap-2`}>
-                                                {msg.imageUrl && <img src={msg.imageUrl} onClick={() => setShowFullImage(msg.imageUrl)} className={`max-w-[240px] w-full h-auto rounded-[28px] shadow-sm border border-black/5 ${msg.sender === 'me' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`} />}
-                                                {msg.type === 'call' ? (
-                                                    <div className={`flex items-end gap-2.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                                        <div className="px-6 py-4 rounded-[24px] shadow-sm flex items-center gap-3.5 border border-black/5 bg-white"><div className="w-6 h-6 text-gray-700"><IconPhoneFilled /></div><span className="text-sm font-black text-gray-800">{msg.duration}</span></div>
-                                                        <span className="text-[10px] text-gray-500 mb-0.5 font-bold uppercase">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
-                                                    </div>
-                                                ) : (
-                                                    msg.text && (
+                        <Fragment>
+                            {/* 🌟 채팅 영역 배경 파란색으로 고정 및 여백 제거 */}
+                            <main className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar bg-[#BACEE0]" onClick={() => setShowAttachMenu(false)}>
+                                {messages.map((msg) => (
+                                    <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
+                                        <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                            {msg.sender !== 'me' && <div onClick={() => { setProfileTarget('deidara'); window.history.pushState({ page: 'modal' }, ''); }} className="w-10 h-10 rounded-[14px] bg-white mr-3 flex-shrink-0 overflow-hidden border border-orange-50 shadow-sm cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>}
+                                            <div className="flex flex-col w-full">
+                                                {/* 🌟 이름 한글 복구 */}
+                                                {msg.sender !== 'me' && <span className="text-[12px] text-gray-600 mb-1.5 ml-1 font-bold font-black">데이다라</span>}
+                                                <div className={`flex flex-col items-${msg.sender === 'me' ? 'end' : 'start'} gap-2`}>
+                                                    {msg.imageUrl && <img src={msg.imageUrl} onClick={() => setShowFullImage(msg.imageUrl)} className={`max-w-[240px] w-full h-auto rounded-[28px] shadow-sm border border-black/5 ${msg.sender === 'me' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`} />}
+                                                    {msg.type === 'call' ? (
                                                         <div className={`flex items-end gap-2.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                                            <div className={`px-5 py-3.5 rounded-[24px] text-[15px] shadow-sm font-bold tracking-tight ${msg.sender === 'me' ? 'bg-[#FEE500] rounded-tr-sm text-gray-900' : 'bg-white rounded-tl-sm border border-black/5 text-gray-800'}`}>{msg.text}</div>
-                                                            <span className="text-[10px] text-gray-500 mb-0.5 font-bold uppercase whitespace-nowrap">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
+                                                            <div className="px-6 py-4 rounded-[24px] shadow-sm flex items-center gap-3.5 border border-black/5 bg-white"><div className="w-6 h-6 text-gray-700"><IconPhoneFilled /></div><span className="text-sm font-black text-gray-800">{msg.duration}</span></div>
+                                                            <span className="text-[10px] text-gray-500 mb-0.5 font-bold uppercase">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
                                                         </div>
-                                                    )
-                                                )}
+                                                    ) : (
+                                                        msg.text && (
+                                                            <div className={`flex items-end gap-2.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                                <div className={`px-5 py-3.5 rounded-[24px] text-[15px] shadow-sm font-bold tracking-tight ${msg.sender === 'me' ? 'bg-[#FEE500] rounded-tr-sm text-gray-900' : 'bg-white rounded-tl-sm border border-black/5 text-gray-800'}`}>{msg.text}</div>
+                                                                <span className="text-[10px] text-gray-500 mb-0.5 font-bold uppercase whitespace-nowrap">{msg.time || safeTimeStr(msg.createdAt, '')}</span>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+                                ))}
+                                {isTyping && <div className="ml-13 bg-white/70 px-5 py-3 rounded-2xl rounded-tl-sm text-[11px] w-fit animate-pulse shadow-sm text-gray-400 font-bold border border-black/5 tracking-widest uppercase">Typing...</div>}
+                                <div ref={chatEndRef} />
+                            </main>
+                            {/* 🌟 하단바 여백 제거 */}
+                            <footer className="p-3.5 bg-white border-t border-gray-100 pb-safe flex flex-col relative z-30 shadow-sm mt-0">
+                                {showAttachMenu && (
+                                    <div className="absolute bottom-[70px] left-3 bg-white border border-gray-100 rounded-3xl shadow-xl p-2.5 w-60 flex flex-col gap-1 z-40 slide-in">
+                                        <button onClick={() => chatFileInputRef.current.click()} className="text-left px-5 py-4 text-sm font-bold text-gray-700 hover:bg-gray-50 rounded-2xl transition-colors">🖼️ 내 사진 보내기</button>
+                                        <button onClick={handleRequestDeidaraPhoto} className="text-left px-5 py-4 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-2xl transition-colors">📸 데이다라 사진 요구</button>
+                                        <input type="file" accept="image/*" ref={chatFileInputRef} onChange={handleChatUploadMyPhoto} className="hidden" />
+                                    </div>
+                                )}
+                                <div className="flex gap-3 items-center w-full px-1">
+                                    <button onClick={() => setShowAttachMenu(!showAttachMenu)} className="w-[38px] h-[38px] shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:scale-90 transition-all"><div className="w-[24px] h-[24px]"><IconCamera /></div></button>
+                                    <button onClick={() => { setShowCallModal(true); window.history.pushState({ page: 'callModal' }, ''); }} className="w-[38px] h-[38px] shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:scale-90 transition-all"><div className="w-[24px] h-[24px]"><IconPhoneOutline /></div></button>
+                                    <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 min-w-0 bg-gray-100 border border-transparent focus:bg-white focus:border-gray-200 rounded-full px-5 py-3 text-[15px] outline-none transition-all placeholder-gray-400 font-bold" placeholder="메시지 입력..." />
+                                    <button onClick={handleSend} className="w-[38px] h-[38px] shrink-0 bg-[#FEE500] rounded-full flex items-center justify-center active:scale-90 shadow-sm transition-transform"><div className="w-[20px] h-[20px] text-gray-800 ml-0.5"><IconSend /></div></button>
                                 </div>
-                            ))}
-                            {isTyping && <div className="ml-13 bg-white/70 px-5 py-3 rounded-2xl rounded-tl-sm text-[11px] w-fit animate-pulse shadow-sm text-gray-400 font-bold border border-black/5 tracking-widest uppercase">Typing...</div>}
-                            <div ref={chatEndRef} />
-                        </main>
+                            </footer>
+                        </Fragment>
                     )}
 
-                    {view === 'main' ? (
+                    {view === 'main' && (
                         <nav className="absolute bottom-0 w-full bg-white/95 border-t border-gray-100 flex justify-around items-center h-[82px] pb-safe z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md">
                             <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1.5 cursor-pointer w-full h-full justify-center transition-all ${activeTab==='friends'?'text-gray-900 scale-110':'text-gray-300'}`}><div className="w-[26px] h-[26px]"><IconTabFriend active={activeTab==='friends'} /></div><span className="text-[10px] font-black tracking-tighter uppercase">Home</span></div>
                             <div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1.5 cursor-pointer w-full h-full justify-center transition-all ${activeTab==='chat'?'text-gray-900 scale-110':'text-gray-300'}`}><div className="w-[26px] h-[26px]"><IconTabChat active={activeTab==='chat'} /></div><span className="text-[10px] font-black tracking-tighter uppercase">Chat</span></div>
                             <div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1.5 cursor-pointer w-full h-full justify-center transition-all ${activeTab==='feed'?'text-gray-900 scale-110':'text-gray-300'}`}><div className="w-[26px] h-[26px]"><IconTabFeed active={activeTab==='feed'} /></div><span className="text-[10px] font-black tracking-tighter uppercase">Feed</span></div>
                         </nav>
-                    ) : (
-                        <footer className="p-3.5 bg-white border-t border-gray-100 pb-safe flex flex-col relative z-30 shadow-sm">
-                            {showAttachMenu && (
-                                <div className="absolute bottom-[70px] left-3 bg-white border border-gray-100 rounded-3xl shadow-xl p-2.5 w-60 flex flex-col gap-1 z-40 slide-in">
-                                    <button onClick={() => chatFileInputRef.current.click()} className="text-left px-5 py-4 text-sm font-bold text-gray-700 hover:bg-gray-50 rounded-2xl transition-colors">🖼️ 내 사진 보내기</button>
-                                    <button onClick={handleRequestDeidaraPhoto} className="text-left px-5 py-4 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-2xl transition-colors">📸 데이다라 사진 요구</button>
-                                    <input type="file" accept="image/*" ref={chatFileInputRef} onChange={handleChatUploadMyPhoto} className="hidden" />
-                                </div>
-                            )}
-                            <div className="flex gap-3 items-center w-full px-1">
-                                <button onClick={() => setShowAttachMenu(!showAttachMenu)} className="w-[38px] h-[38px] shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:scale-90 transition-all"><div className="w-[24px] h-[24px]"><IconCamera /></div></button>
-                                <button onClick={() => { setShowCallModal(true); window.history.pushState({ page: 'callModal' }, ''); }} className="w-[38px] h-[38px] shrink-0 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:scale-90 transition-all"><div className="w-[24px] h-[24px]"><IconPhoneOutline /></div></button>
-                                <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 min-w-0 bg-gray-100 border border-transparent focus:bg-white focus:border-gray-200 rounded-full px-5 py-3 text-[15px] outline-none transition-all placeholder-gray-400 font-bold" placeholder="메시지 입력..." />
-                                <button onClick={handleSend} className="w-[38px] h-[38px] shrink-0 bg-[#FEE500] rounded-full flex items-center justify-center active:scale-90 shadow-sm transition-transform"><div className="w-[20px] h-[20px] text-gray-800 ml-0.5"><IconSend /></div></button>
-                            </div>
-                        </footer>
                     )}
                 </div>
             );
