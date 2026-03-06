@@ -61,7 +61,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, Fragment } = React;
 
-        // 🌟 1. 주변 인물 현대 AU 설정 반영된 시스템 프롬프트
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 여기는 현실 대화나 전화 통화가 아니라, **'메신저 앱(카톡, 라인 등)의 채팅방'**이야! 행동 묘사는 하지 말고 카톡 말투를 써.
@@ -82,7 +81,6 @@
 - 초성 앞뒤 마침표 금지. 말버릇 '음'은 문장 끝에 가끔 붙여.
         `;
 
-        // 이미지 압축 로직 (1MB 제한)
         const compressBase64Image = (base64Str) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -119,7 +117,14 @@
             try { return (ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return fallback || '방금 전'; }
         };
 
-        // UI 아이콘 모음
+        // 타임스탬프를 안전하게 밀리초(ms)로 변환하는 헬퍼 함수
+        const getTsMillis = (ts) => {
+            if (!ts) return Date.now();
+            if (ts.toMillis) return ts.toMillis();
+            if (ts.seconds) return ts.seconds * 1000;
+            return Date.now();
+        };
+
         const DefaultAvatar = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
         const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
@@ -135,7 +140,6 @@
 
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <DefaultAvatar />);
 
-        // 프로필 모달 컴포넌트
         const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
             const isMe = profileTarget === 'me';
             const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
@@ -217,7 +221,6 @@
             const feedFileInputRef = useRef(null);
             const cropCanvasRef = useRef(null);
 
-            // 초기화
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
@@ -232,19 +235,61 @@
                 }, 100);
             }, []);
 
+            // 🌟 메시지 불러오기 로직 (Firebase 색인 오류 방지를 위해 JavaScript 배열 정렬 적용)
+            useEffect(() => {
+                if (!currentRoomId || !user || !db) return;
+                const { collection, query, onSnapshot } = window.firebaseAPI;
+                // orderBy() 제거! 단순 collection 호출
+                const q = query(collection(db, `users/${user.uid}/rooms/${currentRoomId}/messages`));
+                
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const loadedMsgs = [];
+                    snapshot.forEach((doc) => {
+                        loadedMsgs.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // 프론트엔드 단에서 시간순으로 정렬 (에러 방지 핵심 로직)
+                    loadedMsgs.sort((a, b) => getTsMillis(a.createdAt) - getTsMillis(b.createdAt));
+                    
+                    setMessages(loadedMsgs);
+                    
+                    setTimeout(() => {
+                        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }, (error) => {
+                    console.error("채팅 메시지 로딩 에러:", error);
+                });
+                
+                return () => unsubscribe();
+            }, [currentRoomId, user, db]);
+
             const loadChatRooms = (uid, fdb) => {
-                const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
-                const q = query(collection(fdb, `users/${uid}/rooms`), orderBy('updatedAt', 'desc'));
+                const { collection, query, onSnapshot } = window.firebaseAPI;
+                // orderBy() 제거! 단순 collection 호출
+                const q = query(collection(fdb, `users/${uid}/rooms`));
                 onSnapshot(q, (sn) => {
-                    const rooms = []; sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); setChatRooms(rooms);
+                    const rooms = []; 
+                    sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); 
+                    // 최근 업데이트 순으로 정렬
+                    rooms.sort((a, b) => getTsMillis(b.updatedAt) - getTsMillis(a.updatedAt));
+                    setChatRooms(rooms);
+                }, (error) => {
+                    console.error("채팅방 로딩 에러:", error);
                 });
             };
 
             const loadPosts = (uid, fdb) => {
-                const { collection, query, orderBy, onSnapshot } = window.firebaseAPI;
-                const q = query(collection(fdb, `users/${uid}/posts`), orderBy('createdAt', 'desc'));
+                const { collection, query, onSnapshot } = window.firebaseAPI;
+                // orderBy() 제거! 단순 collection 호출
+                const q = query(collection(fdb, `users/${uid}/posts`));
                 onSnapshot(q, (sn) => {
-                    const loaded = []; sn.forEach(d => loaded.push({ id: d.id, ...d.data() })); setPosts(loaded);
+                    const loaded = []; 
+                    sn.forEach(d => loaded.push({ id: d.id, ...d.data() })); 
+                    // 최근 작성 순으로 정렬
+                    loaded.sort((a, b) => getTsMillis(b.createdAt) - getTsMillis(a.createdAt));
+                    setPosts(loaded);
+                }, (error) => {
+                    console.error("피드 로딩 에러:", error);
                 });
             };
 
@@ -515,7 +560,6 @@
                                         ))}
                                     </div>
                                 )}
-                                {/* 🌟 피드 레이아웃 최적화: 여백 줄이고 피드 이미지 비율(object-cover, max-h) 정상화 */}
                                 {activeTab === 'feed' && (
                                     <div className="flex-1 bg-gray-100 pb-20">
                                         <div className="bg-white p-5 md:p-6 mb-6 shadow-sm border-b border-gray-100">
