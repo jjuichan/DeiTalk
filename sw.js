@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deidara-talk-v6';
+const CACHE_NAME = 'deitalk-v7'; // 버전을 올려 이전 캐시 강제 무효화
 const urlsToCache = [
   './',
   './index.html',
@@ -12,16 +12,25 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
+      );
+    })
+  );
 });
 
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        if (response) {
-          return response; // 캐시에 있으면 캐시 반환
-        }
-        return fetch(event.request); // 없으면 네트워크 요청
+        if (response) return response;
+        return fetch(event.request);
       })
   );
 });
