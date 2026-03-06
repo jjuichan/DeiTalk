@@ -9,39 +9,18 @@
     
     <link rel="manifest" href="./manifest.json">
     
-    <!-- React & Tailwind -->
+    <!-- 🌟 React & Tailwind 로드 -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- 🌟 JSX 파싱을 위한 Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
-    <!-- 🌟 Firebase SDK 모듈 로드 (여기에만 import 사용) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, GoogleAuthProvider, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // 환경 변수 처리 방어 로직
-        const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        let app, auth, db;
-        try {
-            const firebaseConfig = JSON.parse(configStr);
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        } catch(e) {
-            console.error("Firebase Init Error:", e);
-        }
-        const provider = new GoogleAuthProvider();
-
-        // 전역 객체로 전달하여 Babel 스크립트에서 import 없이 사용하도록 설정
-        window.firebaseAPI = { 
-            auth, db, provider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken,
-            collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc 
-        };
-    </script>
+    <!-- 🌟 무한 로딩 및 코드 깨짐 해결: Firebase Compat 라이브러리 동기 로드 -->
+    <!-- import 모듈 방식을 제거하여 PWA 환경에서의 비동기 충돌 원인을 원천 차단했습니다. -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #BACEE0; }
@@ -60,13 +39,23 @@
 <body>
     <div id="root"></div>
 
-    <!-- 🌟 React 로직 (import문 절대 금지) -->
+    <!-- 🌟 React 로직 시작 (Babel 환경) -->
     <script type="text/babel">
-        // React 객체에서 Hook 꺼내오기
         const { useState, useEffect, useRef, Fragment } = React;
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app-v6';
-        const apiKey = ""; 
+        // Firebase 초기화 (Compat 버전 객체 사용)
+        const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        const firebaseConfig = JSON.parse(configStr);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
+        // API 환경 변수
+        let globalApiKey = "";
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
@@ -78,7 +67,7 @@
 - 초성 앞뒤 마침표 금지. 말버릇 '음'은 문장 끝에 가끔 붙여.
         `;
 
-        // 🌟 2560px 초고화질 압축 엔진
+        // 초고화질 이미지 압축 엔진 (2560px)
         const compressBase64Image = (base64Str, maxSize = 2560, quality = 0.95) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -128,13 +117,13 @@
                 <div className="fixed inset-0 z-[2500] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? (myBgImgUrl || '') : (bgImgUrl || '')}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                     <div className="absolute inset-0 bg-black/40 z-0"></div>
                     <div className="flex justify-between p-4 z-10">
-                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); }} className="text-white p-2 active:bg-white/20 rounded-full transition"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); }} className="text-white p-2 active:bg-white/20 rounded-full transition font-black text-lg">✕</button>
                         {!isEditingProfile && <button onClick={() => setIsEditingProfile(true)} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
                     </div>
                     <div className="flex flex-col items-center pb-12 text-white z-10 mt-auto w-full px-6 text-center">
                         {isEditingProfile && <div className="absolute top-16 right-4"><input type="file" accept="image/*" onChange={(e) => handleImageUploadUI(e, 'bg', isMe ? 'me' : 'deidara')} id="bg-edit-upload" className="hidden" /><label htmlFor="bg-edit-upload" className="bg-black/50 text-white px-3 py-1.5 rounded-full text-xs cursor-pointer border border-white/20 font-semibold">배경 변경</label></div>}
                         <div onClick={() => !isEditingProfile && setShowFullImage(isMe ? myProfileImgUrl : profileImgUrl)} className="w-24 h-24 rounded-[36px] bg-white/20 flex items-center justify-center shadow-2xl mb-5 border-2 border-white/30 relative overflow-hidden backdrop-blur-sm cursor-pointer">
-                            {(isMe ? myProfileImgUrl : profileImgUrl) ? <img src={isMe ? myProfileImgUrl : profileImgUrl} className="w-full h-full object-cover" /> : <div className="w-1/2 h-1/2 flex items-center justify-center text-4xl">👤</div>}
+                            {(isMe ? myProfileImgUrl : profileImgUrl) ? <img src={isMe ? myProfileImgUrl : profileImgUrl} className="w-full h-full object-cover" /> : <div className="text-3xl opacity-50">👤</div>}
                             {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer text-2xl">📷</label>}
                             {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
                         </div>
@@ -174,11 +163,11 @@
             const [myStatus, setMyStatus] = useState(localStorage.getItem('my_status') || '문창과 4학년. 데이다라랑 썸타는 중!');
             const [deidaraStatus, setDeidaraStatus] = useState(localStorage.getItem('deidara_current_status') || "점토 빚는 중...");
             
-            const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
+            const [showSettings, setShowSettings] = useState(false);
             const [profileTarget, setProfileTarget] = useState(null); 
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
-            const [alertMsg, setAlertMsg] = useState(null);
+            
             const [analysisResult, setAnalysisResult] = useState(null);
             const [isAnalyzing, setIsAnalyzing] = useState(false);
             const [suggestedReplies, setSuggestedReplies] = useState(null);
@@ -186,35 +175,22 @@
             const chatEndRef = useRef(null);
             const feedFileInputRef = useRef(null);
 
-            // 🌟 PWA 무한로딩 방지 & 완벽한 인증 처리 로직
+            // 🌟 인증 로직 개선: PWA 로딩 에러 원천 방지
             useEffect(() => {
-                if (!window.firebaseAPI) {
-                    setView('login');
-                    return;
-                }
-                const { auth, onAuthStateChanged, getRedirectResult, signInWithCustomToken } = window.firebaseAPI;
+                const initAuth = async () => {
+                    try {
+                        // 리다이렉트 로그인 결과 확인
+                        await auth.getRedirectResult();
+                    } catch (e) { console.warn("Redirect Login Result Error", e); }
 
-                // 1. 만약 5초 동안 반응이 없으면 무한로딩 방지를 위해 강제로 로그인창 띄움
-                const emergencyTimer = setTimeout(() => {
-                    setView(prev => prev === 'loading' ? 'login' : prev);
-                }, 5000);
-
-                const checkAuth = async () => {
-                    try { 
-                        await getRedirectResult(auth); 
-                    } catch (e) { 
-                        console.warn("Redirect Error", e); 
-                    }
+                    // 초기 커스텀 토큰이 제공된 경우
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        try { 
-                            await signInWithCustomToken(auth, __initial_auth_token); 
-                        } catch(e) {}
+                        try { await auth.signInWithCustomToken(__initial_auth_token); } catch(e) {}
                     }
                 };
-
-                checkAuth().finally(() => {
-                    onAuthStateChanged(auth, (u) => {
-                        clearTimeout(emergencyTimer); // 인증 콜백이 오면 타이머 해제
+                
+                initAuth().finally(() => {
+                    const unsubscribe = auth.onAuthStateChanged((u) => {
                         if (u) {
                             setUser(u); setView('main');
                             loadChatRooms(u.uid); loadPosts(u.uid);
@@ -222,12 +198,11 @@
                             setView('login');
                         }
                     });
+                    return () => unsubscribe();
                 });
-
-                return () => clearTimeout(emergencyTimer);
             }, []);
 
-            // 뒤로가기 모달 닫기
+            // 뒤로가기 모달 닫기 제어
             useEffect(() => {
                 const handlePop = () => {
                     if (view === 'chatRoom') setView('main');
@@ -240,45 +215,43 @@
             const getPath = (uid, col) => `artifacts/${appId}/users/${uid}/${col}`;
 
             const loadChatRooms = (uid) => {
-                const { db, collection, query, orderBy, onSnapshot } = window.firebaseAPI;
-                const q = query(collection(db, getPath(uid, 'rooms')), orderBy('updatedAt', 'desc'));
-                onSnapshot(q, (sn) => {
+                db.collection(getPath(uid, 'rooms')).orderBy('updatedAt', 'desc').onSnapshot((sn) => {
                     const rooms = []; sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); setChatRooms(rooms);
                 });
             };
 
             const loadPosts = (uid) => {
-                const { db, collection, query, orderBy, onSnapshot } = window.firebaseAPI;
-                const q = query(collection(db, getPath(uid, 'posts')), orderBy('createdAt', 'desc'));
-                onSnapshot(q, (sn) => {
+                db.collection(getPath(uid, 'posts')).orderBy('createdAt', 'desc').onSnapshot((sn) => {
                     const loaded = []; sn.forEach(d => loaded.push({ id: d.id, ...d.data() })); setPosts(loaded);
                 });
             };
 
             useEffect(() => {
                 if (view === 'chatRoom' && currentRoomId && user) {
-                    const { db, collection, query, orderBy, onSnapshot } = window.firebaseAPI;
-                    const q = query(collection(db, `${getPath(user.uid, 'rooms')}/${currentRoomId}/messages`), orderBy('createdAt', 'asc'));
-                    const unsubscribe = onSnapshot(q, (sn) => {
-                        const msgs = []; sn.forEach(d => msgs.push({ id: d.id, ...d.data() })); setMessages(msgs);
-                        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-                    });
+                    const unsubscribe = db.collection(getPath(user.uid, 'rooms')).doc(currentRoomId).collection('messages')
+                        .orderBy('createdAt', 'asc').onSnapshot((sn) => {
+                            const msgs = []; sn.forEach(d => msgs.push({ id: d.id, ...d.data() })); setMessages(msgs);
+                            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                        });
                     return () => unsubscribe();
                 }
             }, [view, currentRoomId, user]);
 
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
-                const targetModel = apiModel === 'gemini-2.5-pro' ? 'gemini-2.5-flash-preview-09-2025' : apiModel;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+                // 사용자가 입력한 API 키 사용 우선
+                const activeKey = geminiKey || globalApiKey;
+                const targetModel = apiModel; // 사용자가 선택한 모델 (gemini-2.5-pro 등) 그대로 사용
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${activeKey}`;
+                
                 let delays = [1000, 2000, 4000];
                 for (let i = 0; i < 3; i++) {
                     try {
                         const resp = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: customPrompt }] } }) });
                         const data = await resp.json();
-                        if (!resp.ok) throw new Error("API Error");
+                        if (!resp.ok) throw new Error(data.error?.message || "API Error");
                         return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...)";
                     } catch (e) {
-                        if (i === 2) return "통신 장애 발생... 음!";
+                        if (i === 2) return `통신 장애가 발생했어. 음! (${e.message})`;
                         await new Promise(r => setTimeout(r, delays[i]));
                     }
                 }
@@ -306,54 +279,55 @@
 
             const handleLogin = () => {
                 setView('loading');
-                const { auth, provider, signInWithRedirect } = window.firebaseAPI;
-                signInWithRedirect(auth, provider);
+                auth.signInWithRedirect(provider).catch(() => setView('login'));
             };
 
             const handleGuestLogin = () => {
                 setView('loading');
-                const { auth, signInAnonymously } = window.firebaseAPI;
-                signInAnonymously(auth);
+                auth.signInAnonymously().catch(() => setView('login'));
             };
 
             const handleSend = async () => {
                 if (!currentRoomId || !user || !inputText.trim()) return;
-                const { db, collection, addDoc, doc: fdoc, setDoc, serverTimestamp } = window.firebaseAPI;
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                 const text = inputText; 
                 setInputText(''); setIsTyping(true);
                 try {
-                    await addDoc(collection(db, `${getPath(user.uid, 'rooms')}/${currentRoomId}/messages`), { sender: 'me', text, time, createdAt: serverTimestamp() });
+                    const roomRef = db.collection(getPath(user.uid, 'rooms')).doc(currentRoomId);
+                    await roomRef.collection('messages').add({ sender: 'me', text, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    
                     const history = messages.slice(-20).map(m => ({role: m.sender==='me'?'user':'model', parts:[{text: m.text}]})).concat({role:'user', parts:[{text}]});
                     const resp = await fetchAPI(history);
-                    await addDoc(collection(db, `${getPath(user.uid, 'rooms')}/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, createdAt: serverTimestamp() });
-                    await setDoc(fdoc(db, `${getPath(user.uid, 'rooms')}/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
+                    
+                    await roomRef.collection('messages').add({ sender: 'deidara', text: resp, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    await roomRef.set({ lastMessage: resp, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                 } finally { setIsTyping(false); }
             };
 
             const handleAddPost = async () => {
                 if (!user) return;
                 setIsPosting(true);
-                const { db, collection, addDoc, doc: fdoc, updateDoc, arrayUnion, serverTimestamp } = window.firebaseAPI;
                 try {
                     const myContent = postInput.trim();
-                    const docRef = await addDoc(collection(db, getPath(user.uid, 'posts')), { author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: serverTimestamp(), comments: [] });
+                    const docRef = await db.collection(getPath(user.uid, 'posts')).add({ author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: firebase.firestore.FieldValue.serverTimestamp(), comments: [] });
                     setPostInput(''); setFeedAttachedImage(null);
                     const resp = await fetchAPI([{role:'user', parts: [{text: `연지가 피드를 올렸어. 내용은 "${myContent || '(사진만 있음)'}" 야. 댓글 달아줘.`}]}]);
-                    await updateDoc(fdoc(db, `${getPath(user.uid, 'posts')}/${docRef.id}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                    await docRef.update({ comments: firebase.firestore.FieldValue.arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
                 } finally { setIsPosting(false); }
             };
 
             const handleAddComment = async (post) => {
                 if (!user) return;
                 const postId = post.id; const commentText = commentInputs[postId]?.trim(); 
-                const { db, doc: fdoc, updateDoc, arrayUnion } = window.firebaseAPI;
                 if (!commentText) return;
-                await updateDoc(fdoc(db, `${getPath(user.uid, 'posts')}/${postId}`), { comments: arrayUnion({ author: 'me', content: commentText, createdAt: Date.now() }) });
-                setCommentInputs(prev => ({...prev, [postId]: ''})); setIsPosting(true);
-                const resp = await fetchAPI([{role:'user', parts: [{text: `연지의 댓글 "${commentText}"에 대댓글 남겨줘.`}]}]);
-                await updateDoc(fdoc(db, `${getPath(user.uid, 'posts')}/${postId}`), { comments: arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                setIsPosting(false);
+                setIsPosting(true);
+                try {
+                    const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
+                    await postRef.update({ comments: firebase.firestore.FieldValue.arrayUnion({ author: 'me', content: commentText, createdAt: Date.now() }) });
+                    setCommentInputs(prev => ({...prev, [postId]: ''}));
+                    const resp = await fetchAPI([{role:'user', parts: [{text: `연지의 댓글 "${commentText}"에 대댓글 남겨줘.`}]}]);
+                    await postRef.update({ comments: firebase.firestore.FieldValue.arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
+                } finally { setIsPosting(false); }
             };
 
             const handleImageUploadUI = async (e, mode, target) => {
@@ -374,7 +348,7 @@
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0]">
                     <div className="w-24 h-24 rounded-[32px] bg-white mb-8 shadow-xl flex items-center justify-center text-4xl">🎨</div>
                     <h1 className="text-3xl font-black text-gray-800 mb-10 tracking-tight">DeiTalk</h1>
-                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform mb-3">구글로 시작하기</button>
+                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform mb-3 text-gray-800">구글로 시작하기</button>
                     <button onClick={handleGuestLogin} className="w-full max-w-xs bg-black/10 py-4 rounded-2xl font-bold text-gray-600 text-sm active:scale-95 transition-transform">게스트로 입장</button>
                     <p className="mt-8 text-[11px] text-gray-500 font-bold opacity-70 text-center leading-relaxed">구글 로그인이 차단되는 환경이라면<br/>게스트 버튼을 이용해주세요.</p>
                 </div>
@@ -385,7 +359,6 @@
                     {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
                     {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
                     
-                    {/* ✨ 대화 분석 모달 */}
                     {analysisResult && (
                         <div className="fixed inset-0 z-[4000] bg-black/80 flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setAnalysisResult(null)}>
                             <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl relative" onClick={e=>e.stopPropagation()}>
@@ -396,7 +369,6 @@
                         </div>
                     )}
 
-                    {/* ✨ 피드 답글 추천 모달 */}
                     {suggestedReplies && (
                         <div className="fixed inset-0 z-[4000] bg-black/80 flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setSuggestedReplies(null)}>
                             <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl" onClick={e=>e.stopPropagation()}>
@@ -410,23 +382,24 @@
                     {showSettings && (
                         <div className="fixed inset-0 z-[2500] bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
                             <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
-                                <h2 className="text-xl font-bold mb-6">설정</h2>
-                                <div className="bg-gray-100 p-4 rounded-2xl mb-6">
+                                <h2 className="text-xl font-bold mb-6 text-gray-800">설정</h2>
+                                <div className="bg-gray-100 p-4 rounded-2xl mb-6 border border-gray-200">
                                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1">User Info</p>
                                     <p className="text-xs font-bold text-gray-700 truncate">{user?.email || `Guest (UID: ${user?.uid?.substring(0,8)}...)`}</p>
                                 </div>
                                 <div className="space-y-5 mb-8">
                                     <div><p className="text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase font-bold">AI Model</p>
-                                        <select value={apiModel} onChange={e=>{ setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value); }} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 text-sm font-bold outline-none">
+                                        <select value={apiModel} onChange={e=>{ setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value); }} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 text-sm font-bold outline-none text-gray-800">
                                             <option value="gemini-2.5-pro">Gemini 2.5 Pro (최상위)</option>
                                             <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                                            <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash Preview</option>
                                             <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                                         </select>
                                     </div>
-                                    <div><p className="text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase font-bold">API Key</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 outline-none text-sm font-semibold" /></div>
+                                    <div><p className="text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase font-bold">API Key (본인 키 입력)</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 outline-none text-sm font-semibold text-gray-800" /></div>
                                 </div>
                                 <button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-4 rounded-2xl font-bold mb-3 text-gray-900 shadow-sm active:scale-95 transition-transform">저장</button>
-                                <button onClick={() => { window.firebaseAPI.signOut(window.firebaseAPI.auth); setShowSettings(false); }} className="w-full bg-gray-100 text-gray-500 py-4 rounded-2xl font-bold active:scale-95 transition-transform">로그아웃</button>
+                                <button onClick={() => { auth.signOut(); setShowSettings(false); }} className="w-full bg-gray-100 text-gray-500 py-4 rounded-2xl font-bold active:scale-95 transition-transform">로그아웃</button>
                             </div>
                         </div>
                     )}
@@ -436,8 +409,8 @@
                             <header className="px-5 py-5 bg-white border-b border-gray-100 flex justify-between items-center sticky top-0 z-20 bg-white/90 backdrop-blur-md">
                                 <h1 className="font-extrabold text-xl tracking-tight text-gray-900">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1>
                                 <div className="flex gap-4">
-                                    {activeTab === 'chat' && <button onClick={() => { const n = prompt("새로운 방 이름?"); if(n) window.firebaseAPI.addDoc(window.firebaseAPI.collection(window.firebaseAPI.db, getPath(user.uid, 'rooms')), {name:n, updatedAt: window.firebaseAPI.serverTimestamp()}); }} className="text-xl">➕</button>}
-                                    <button onClick={() => setShowSettings(true)} className="text-xl">⚙️</button>
+                                    {activeTab === 'chat' && <button onClick={() => { const n = prompt("새로운 방 이름?"); if(n) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="text-xl active:scale-90 transition-transform">➕</button>}
+                                    <button onClick={() => setShowSettings(true)} className="text-xl active:scale-90 transition-transform">⚙️</button>
                                 </div>
                             </header>
                             <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
@@ -460,9 +433,10 @@
                                 {activeTab === 'chat' && (
                                     <div className="flex-1 px-4 py-4 space-y-4">
                                         {chatRooms.map(room => (
-                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-4 bg-white border border-gray-100 rounded-[36px] cursor-pointer shadow-sm active:scale-95 transition-all">
-                                                <div className="w-[58px] h-[58px] rounded-[22px] bg-white border border-orange-50 flex items-center justify-center overflow-hidden">{renderProfilePicCommon(profileImgUrl)}</div>
+                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, ''); }} className="flex items-center gap-5 p-4 bg-white border border-gray-100 rounded-[36px] cursor-pointer shadow-sm active:scale-95 transition-all">
+                                                <div className="w-[58px] h-[58px] rounded-[22px] bg-white border border-orange-50 flex items-center justify-center overflow-hidden shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
                                                 <div className="flex-1 min-w-0 pr-6"><h3 className="font-bold text-gray-900 truncate tracking-tight">{room.name}</h3><p className="text-[13px] text-gray-500 truncate mt-1 font-medium">{room.lastMessage || "대화가 없습니다."}</p></div>
+                                                <button onClick={(e) => { e.stopPropagation(); if(confirm("방 삭제?")) db.collection(getPath(user.uid, 'rooms')).doc(room.id).delete(); }} className="absolute right-6 p-2 text-red-400 bg-red-50 rounded-xl active:scale-90">✕</button>
                                             </div>
                                         ))}
                                     </div>
@@ -483,11 +457,10 @@
                                                 <div className="flex items-center gap-3 mb-4">
                                                     <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-50">{post.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
                                                     <div className="flex-1 min-w-0"><div className="font-black text-gray-800 text-[15px]">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{safeDateStr(post.createdAt)}</div></div>
-                                                    <button onClick={() => { if(confirm("삭제할까요?")) window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(db, `${getPath(user.uid, 'posts')}/${post.id}`)); }} className="p-1 text-gray-300"><div className="w-4 h-4"><IconTrash /></div></button>
+                                                    <button onClick={() => { if(confirm("삭제할까요?")) db.collection(getPath(user.uid, 'posts')).doc(post.id).delete(); }} className="p-1 text-gray-300"><div className="w-4 h-4"><IconTrash /></div></button>
                                                 </div>
                                                 {post.imageUrl && <img src={post.imageUrl} onClick={() => setShowFullImage(post.imageUrl)} className="w-full h-auto rounded-2xl mb-4 border border-gray-50 active:opacity-90" />}
                                                 {post.content && <p className="text-sm font-bold text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>}
-                                                {/* ✨ 피드 답글 추천 버튼 */}
                                                 {!isAnalyzing && post.author !== 'me' && (
                                                     <button onClick={() => suggestReply(post.content)} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-black active:scale-95 transition-transform mb-4">✨ 답글 뭐 달지?</button>
                                                 )}
@@ -513,14 +486,13 @@
                         </Fragment>
                     ) : (
                         <Fragment>
-                            {/* 🌟 채팅방: 파란 배경색 고정 및 여백 완벽 제거 */}
+                            {/* 🌟 채팅방: 배경 파란색 고정 및 여백 완벽 제거 */}
                             <header className="px-3 py-3 flex items-center justify-between border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20 backdrop-blur-md">
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setView('main')} className="p-2 active:bg-black/5 rounded-full font-black text-gray-700">←</button>
                                     <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-[14px] bg-white overflow-hidden shadow-sm shrink-0 cursor-pointer active:scale-95 transition-transform">{renderProfilePicCommon(profileImgUrl)}</div>
                                     <h1 className="font-bold text-gray-800 text-lg ml-1">데이다라</h1>
                                 </div>
-                                {/* ✨ 대화 분석 버튼 */}
                                 <button onClick={analyzeChat} disabled={isAnalyzing} className={`p-2 rounded-full bg-white/20 active:scale-90 transition-all font-black text-[10px] text-white shadow-sm flex flex-col items-center leading-none ${isAnalyzing?'animate-spin':''}`}>
                                     <span className="text-lg">✨</span>
                                 </button>
@@ -537,7 +509,7 @@
                                         </div>
                                     </div>
                                 ))}
-                                {isTyping && <div className="ml-13 text-[10px] text-white/50 font-black animate-pulse uppercase tracking-widest">Typing...</div>}
+                                {isTyping && <div className="ml-13 text-[11px] text-white/50 font-black animate-pulse uppercase tracking-widest">Typing...</div>}
                                 <div ref={chatEndRef} />
                             </main>
                             <footer className="p-3 bg-white border-t border-gray-100 pb-safe flex items-center gap-3 relative z-30 mt-0">
