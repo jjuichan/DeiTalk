@@ -19,18 +19,29 @@
     <!-- Firebase SDKs (10.8.0 사용) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // 🌟 PWA 환경을 위해 signInWithRedirect와 getRedirectResult를 추가로 불러옵니다.
+        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 시스템 환경 설정 유지
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // 🚨 중요: 여기에 연지 님의 실제 Firebase 프로젝트 설정값을 넣으셔야 GitHub에서 작동합니다!
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+        apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
+        authDomain: "deitalk-9107c.firebaseapp.com",
+        projectId: "deitalk-9107c",
+        storageBucket: "deitalk-9107c.firebasestorage.app",
+        messagingSenderId: "710740822953",
+        appId: "1:710740822953:web:73416a2d69ff984efe92b8",
+        measurementId: "G-QYDP8692TD"
+              };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
+        auth.useDeviceLanguage(); // 시스템 언어 사용
 
         window.firebaseAPI = { 
-            auth, db, provider, signInWithPopup, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken,
+            auth, db, provider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously,
             collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc 
         };
     </script>
@@ -69,7 +80,6 @@
 - 초성 앞뒤 마침표 금지. 말버릇 '음'은 문장 끝에 가끔 붙여.
         `;
 
-        // 🌟 초고화질 이미지 유지
         const compressBase64Image = (base64Str, maxSize = 2560, quality = 0.95) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -200,26 +210,29 @@
             const [callContent, setCallContent] = useState('');
 
             const [alertMsg, setAlertMsg] = useState(null);
+            const [isLoggingIn, setIsLoggingIn] = useState(false); // 로그인 진행 중 상태 추가
 
             const chatEndRef = useRef(null);
             const chatFileInputRef = useRef(null);
             const feedFileInputRef = useRef(null);
 
-            // 🌟 안정적인 모듈 폴링(setInterval) 유지
             useEffect(() => {
                 const initTimer = setInterval(() => {
                     if (window.firebaseAPI) {
                         clearInterval(initTimer);
-                        const { auth, db: fdb, onAuthStateChanged, signInWithCustomToken } = window.firebaseAPI;
+                        const { auth, db: fdb, onAuthStateChanged, getRedirectResult } = window.firebaseAPI;
                         setDb(fdb);
 
-                        // 시스템 인증 우선 처리
-                        const initAuth = async () => {
-                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                                try { await signInWithCustomToken(auth, __initial_auth_token); } catch(e){}
+                        // 🌟 리다이렉트 로그인 결과 확인 (PWA 환경 필수)
+                        getRedirectResult(auth).then((result) => {
+                            if (result) {
+                                // 로그인이 성공적으로 완료되어 돌아온 경우
+                                setIsLoggingIn(false);
                             }
-                        };
-                        initAuth();
+                        }).catch((error) => {
+                            setAlertMsg("로그인 중 오류가 발생했습니다: " + error.message);
+                            setIsLoggingIn(false);
+                        });
 
                         onAuthStateChanged(auth, (u) => {
                             if (u) {
@@ -431,32 +444,42 @@
                 } catch (err) { setAlertMsg(`이미지 생성 오류: ${err.message}`); } finally { setIsTyping(false); }
             };
 
-            // 🌟 로그인 핸들러 추가: 팝업이 환경 상의 이유로 차단될 경우 익명 로그인으로 우회 연결
+            // 🌟 PWA / 모바일 완벽 대응: signInWithRedirect 방식 사용
             const handleLogin = async () => {
-                if (!window.firebaseAPI) return;
-                const { auth, provider, signInWithPopup, signInAnonymously } = window.firebaseAPI;
+                if (!window.firebaseAPI) {
+                    setAlertMsg("서버를 초기화하는 중입니다. 1~2초 뒤에 다시 시도해주세요. (계속 안 될 경우 Firebase Config를 확인하세요)");
+                    return;
+                }
+                const { auth, provider, signInWithRedirect } = window.firebaseAPI;
+                
+                setIsLoggingIn(true);
                 try {
-                    await signInWithPopup(auth, provider);
+                    // PWA 환경에서는 팝업(Popup) 대신 화면 전환(Redirect) 방식이 안정적입니다.
+                    await signInWithRedirect(auth, provider);
                 } catch (error) {
-                    console.warn("구글 팝업 로그인이 환경(Iframe) 제한으로 차단되었습니다. 익명 로그인으로 자동 대체합니다.", error);
-                    try {
-                        await signInAnonymously(auth);
-                    } catch (anonErr) {
-                        setAlertMsg("로그인 처리 중 오류가 발생했습니다.\n" + anonErr.message);
-                        console.error(anonErr);
-                    }
+                    setIsLoggingIn(false);
+                    setAlertMsg("구글 로그인 진행 중 오류가 발생했습니다.\n\n" + error.message + "\n\n(Firebase 콘솔에 Authorized Domains가 추가되었는지 확인하세요!)");
                 }
             };
 
-            // 🌟 로그인 화면에도 에러 알림(alertMsg)이 뜰 수 있도록 추가 및 버튼 핸들러 연결
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0] relative">
-                    {alertMsg && <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full"><p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button></div></div>}
+                    {alertMsg && <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-3xl p-6 shadow-2xl text-center max-w-sm w-full"><p className="mb-5 text-[14px] text-gray-800 font-bold whitespace-pre-wrap leading-relaxed">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-3.5 bg-[#FEE500] rounded-2xl font-black text-sm w-full shadow-sm active:scale-95 transition-transform text-gray-900">확인</button></div></div>}
                     <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50">
                         <img src="icon-192x192.png" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23ddd"/><text x="50" y="50" dominant-baseline="middle" text-anchor="middle" font-size="20">DeiTalk</text></svg>'; }} className="w-full h-full object-cover" />
                     </div>
-                    <h1 className="text-3xl font-extrabold text-gray-800 mb-2">DeiTalk</h1>
-                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform mb-3">구글로 시작하기</button>
+                    <h1 className="text-4xl font-black text-gray-800 mb-8 tracking-tighter">DeiTalk</h1>
+                    
+                    <button onClick={handleLogin} disabled={isLoggingIn} className={`w-full max-w-xs bg-white text-gray-800 py-4 rounded-2xl shadow-md font-bold transition-transform flex items-center justify-center gap-3 ${isLoggingIn ? 'opacity-70 cursor-wait' : 'active:scale-95'}`}>
+                        {isLoggingIn ? (
+                            <span className="animate-pulse">로그인 화면으로 이동 중...</span>
+                        ) : (
+                            <Fragment>
+                                <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path fill="none" d="M1 1h22v22H1z"/></svg>
+                                구글로 시작하기
+                            </Fragment>
+                        )}
+                    </button>
                 </div>
             );
 
@@ -464,7 +487,7 @@
                 <div className={`w-full h-full flex flex-col ${view === 'chatRoom' ? 'bg-[#BACEE0]' : 'bg-gray-50'} overflow-hidden relative`}>
                     {showFullImage && <FullImageViewer src={showFullImage} onClose={() => setShowFullImage(null)} />}
                     {profileTarget && <ProfileModal profileTarget={profileTarget} setProfileTarget={setProfileTarget} isEditingProfile={isEditingProfile} setIsEditingProfile={setIsEditingProfile} myProfileImgUrl={myProfileImgUrl} profileImgUrl={profileImgUrl} myBgImgUrl={myBgImgUrl} bgImgUrl={bgImgUrl} myStatus={myStatus} deidaraStatus={deidaraStatus} setMyStatus={setMyStatus} setShowFullImage={setShowFullImage} handleImageUploadUI={handleImageUploadUI} setActiveTab={setActiveTab} />}
-                    {alertMsg && <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-sm w-full"><p className="mb-5 text-sm text-gray-800 font-bold whitespace-pre-wrap">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-2 bg-[#FEE500] rounded-full font-bold text-sm w-full">확인</button></div></div>}
+                    {alertMsg && <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-3xl p-6 shadow-2xl text-center max-w-sm w-full"><p className="mb-5 text-[15px] text-gray-800 font-bold whitespace-pre-wrap leading-relaxed">{alertMsg}</p><button onClick={() => setAlertMsg(null)} className="px-6 py-3.5 bg-[#FEE500] rounded-2xl font-black text-sm w-full shadow-sm active:scale-95 transition-transform text-gray-900">확인</button></div></div>}
                     
                     {showCallModal && (
                         <div className="fixed inset-0 z-[1000] bg-black/70 flex items-center justify-center p-6 backdrop-blur-sm">
@@ -653,4 +676,5 @@
     </script>
 </body>
 </html>
+
 
