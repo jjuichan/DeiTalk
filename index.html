@@ -16,8 +16,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
-    <!-- 🌟 무한 로딩 및 코드 깨짐 해결: Firebase Compat 라이브러리 동기 로드 -->
-    <!-- import 모듈 방식을 제거하여 PWA 환경에서의 비동기 충돌 원인을 원천 차단했습니다. -->
+    <!-- 🌟 Firebase Compat 라이브러리 (호환성 최우선) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -39,35 +38,35 @@
 <body>
     <div id="root"></div>
 
-    <!-- 🌟 React 로직 시작 (Babel 환경) -->
     <script type="text/babel">
         const { useState, useEffect, useRef, Fragment } = React;
 
-        // Firebase 초기화 (Compat 버전 객체 사용)
-        const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        const firebaseConfig = JSON.parse(configStr);
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        // 🌟 Firebase 초기화 보호 로직
+        let auth, db, provider;
+        try {
+            const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+            const firebaseConfig = JSON.parse(configStr);
+            if (firebaseConfig.apiKey && !firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            auth = firebase.auth();
+            db = firebase.firestore();
+            provider = new firebase.auth.GoogleAuthProvider();
+        } catch (e) {
+            console.error("Firebase Initialization Error:", e);
         }
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const provider = new firebase.auth.GoogleAuthProvider();
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
-        // API 환경 변수
-        let globalApiKey = "";
+        const apiKey = ""; 
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 여기는 현실 대화나 전화 통화가 아니라, '메신저 앱'의 채팅방이야! 행동 묘사는 하지 말고 카톡 말투를 써.
 사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
-- 건방진 츤데레 성격. 연지와 유치하게 티격태격할 것.
-- 칭찬받으면 극도로 으스대기.
-- '니가', '너', '야', 'ㅅㅂ', '미친' 등 현실 대학생 말투 사용.
-- 초성 앞뒤 마침표 금지. 말버릇 '음'은 문장 끝에 가끔 붙여.
+틱틱대지만 속으로는 잘 챙겨주는 츤데레 성격.
         `;
 
-        // 초고화질 이미지 압축 엔진 (2560px)
+        // 🌟 초고화질 이미지 압축 엔진 (2560px)
         const compressBase64Image = (base64Str, maxSize = 2560, quality = 0.95) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -95,21 +94,15 @@
             });
         };
 
-        const safeDateStr = (ts) => {
-            if (!ts) return '방금 전';
-            try { return (ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)).toLocaleString('ko-KR'); } catch (e) { return '방금 전'; }
-        };
-
         const safeTimeStr = (ts, fallback) => {
             if (!ts) return fallback || '방금 전';
             try { return (ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000)).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return fallback || '방금 전'; }
         };
 
-        const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
+        const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-2xl font-black italic">D</div>);
 
-        const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-        const IconCamera = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
         const IconSend = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
+        const IconCamera = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
 
         const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
             const isMe = profileTarget === 'me';
@@ -117,7 +110,7 @@
                 <div className="fixed inset-0 z-[2500] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? (myBgImgUrl || '') : (bgImgUrl || '')}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                     <div className="absolute inset-0 bg-black/40 z-0"></div>
                     <div className="flex justify-between p-4 z-10">
-                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); }} className="text-white p-2 active:bg-white/20 rounded-full transition font-black text-lg">✕</button>
+                        <button onClick={() => { if(isEditingProfile) setIsEditingProfile(false); else setProfileTarget(null); }} className="text-white p-2 active:bg-white/20 rounded-full transition font-black text-xl">✕</button>
                         {!isEditingProfile && <button onClick={() => setIsEditingProfile(true)} className="text-white px-3 py-1.5 bg-white/10 rounded-full text-xs font-bold border border-white/20">편집</button>}
                     </div>
                     <div className="flex flex-col items-center pb-12 text-white z-10 mt-auto w-full px-6 text-center">
@@ -127,12 +120,12 @@
                             {isEditingProfile && <label htmlFor="p-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer text-2xl">📷</label>}
                             {isEditingProfile && <input type="file" id="p-upload" onChange={(e) => handleImageUploadUI(e, 'profile', isMe ? 'me' : 'deidara')} className="hidden" />}
                         </div>
-                        <h2 className="text-2xl font-extrabold mb-1 text-shadow tracking-tight">{isMe ? '연지' : '데이다라'}</h2>
+                        <h2 className="text-2xl font-black mb-1 text-shadow tracking-tight">{isMe ? '연지' : '데이다라'}</h2>
                         <div className="w-full max-w-[280px] mb-10 mt-2 flex justify-center mx-auto">
                             {isEditingProfile && isMe ? <input type="text" defaultValue={myStatus} onBlur={(e) => { setMyStatus(e.target.value); localStorage.setItem('my_status', e.target.value); }} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2.5 text-sm text-white text-center outline-none font-bold" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-5 py-2.5 rounded-full inline-block backdrop-blur-md font-bold">{isMe ? myStatus : deidaraStatus}</p>}
                         </div>
                         <div className="w-full max-w-[280px] border-t border-white/20 pt-8 flex justify-around mx-auto">
-                            {isEditingProfile ? <button onClick={() => setIsEditingProfile(false)} className="bg-[#FEE500] text-gray-900 font-bold px-10 py-3 rounded-full w-full active:scale-95 transition-all shadow-lg">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); }}><div className="text-white text-3xl">💬</div><span className="text-[12px] font-bold text-shadow">1:1 채팅</span></div>}
+                            {isEditingProfile ? <button onClick={() => setIsEditingProfile(false)} className="bg-[#FEE500] text-gray-900 font-bold px-10 py-3 rounded-full w-full active:scale-95 transition-all shadow-lg">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); }}><div className="text-white text-3xl">💬</div><span className="text-[12px] font-bold text-shadow uppercase">Chat</span></div>}
                         </div>
                     </div>
                 </div>
@@ -146,13 +139,8 @@
             const [chatRooms, setChatRooms] = useState([]);
             const [currentRoomId, setCurrentRoomId] = useState(null);
             const [messages, setMessages] = useState([]);
-            const [posts, setPosts] = useState([]);
             const [inputText, setInputText] = useState('');
-            const [postInput, setPostInput] = useState('');
-            const [feedAttachedImage, setFeedAttachedImage] = useState(null);
-            const [isPosting, setIsPosting] = useState(false);
             const [isTyping, setIsTyping] = useState(false);
-            const [commentInputs, setCommentInputs] = useState({});
 
             const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
             const [apiModel, setApiModel] = useState(localStorage.getItem('gemini_api_model') || 'gemini-2.5-pro'); 
@@ -167,62 +155,42 @@
             const [profileTarget, setProfileTarget] = useState(null); 
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
-            
             const [analysisResult, setAnalysisResult] = useState(null);
             const [isAnalyzing, setIsAnalyzing] = useState(false);
-            const [suggestedReplies, setSuggestedReplies] = useState(null);
 
             const chatEndRef = useRef(null);
-            const feedFileInputRef = useRef(null);
 
-            // 🌟 인증 로직 개선: PWA 로딩 에러 원천 방지
+            // 🌟 인증 관리 (PWA 무한 로딩 방어)
             useEffect(() => {
-                const initAuth = async () => {
-                    try {
-                        // 리다이렉트 로그인 결과 확인
-                        await auth.getRedirectResult();
-                    } catch (e) { console.warn("Redirect Login Result Error", e); }
+                if (!auth) return;
 
-                    // 초기 커스텀 토큰이 제공된 경우
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        try { await auth.signInWithCustomToken(__initial_auth_token); } catch(e) {}
-                    }
+                // 타임아웃 안전장치: 3초 후 강제로 로딩뷰 해제
+                const emergencyTimer = setTimeout(() => {
+                    if (view === 'loading') setView('login');
+                }, 3000);
+
+                const checkResult = async () => {
+                    try { await auth.getRedirectResult(); } catch (e) { console.warn(e); }
                 };
-                
-                initAuth().finally(() => {
-                    const unsubscribe = auth.onAuthStateChanged((u) => {
-                        if (u) {
-                            setUser(u); setView('main');
-                            loadChatRooms(u.uid); loadPosts(u.uid);
-                        } else {
-                            setView('login');
-                        }
-                    });
-                    return () => unsubscribe();
+                checkResult();
+
+                const unsubscribe = auth.onAuthStateChanged((u) => {
+                    clearTimeout(emergencyTimer);
+                    if (u) {
+                        setUser(u); setView('main');
+                        loadChatRooms(u.uid);
+                    } else {
+                        setView('login');
+                    }
                 });
+                return () => unsubscribe();
             }, []);
 
-            // 뒤로가기 모달 닫기 제어
-            useEffect(() => {
-                const handlePop = () => {
-                    if (view === 'chatRoom') setView('main');
-                    if (profileTarget) setProfileTarget(null);
-                };
-                window.addEventListener('popstate', handlePop);
-                return () => window.removeEventListener('popstate', handlePop);
-            }, [view, profileTarget]);
-
-            const getPath = (uid, col) => `artifacts/${appId}/users/${uid}/${col}`;
+            const getPath = (uid, col) => `/artifacts/${appId}/users/${uid}/${col}`;
 
             const loadChatRooms = (uid) => {
                 db.collection(getPath(uid, 'rooms')).orderBy('updatedAt', 'desc').onSnapshot((sn) => {
                     const rooms = []; sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); setChatRooms(rooms);
-                });
-            };
-
-            const loadPosts = (uid) => {
-                db.collection(getPath(uid, 'posts')).orderBy('createdAt', 'desc').onSnapshot((sn) => {
-                    const loaded = []; sn.forEach(d => loaded.push({ id: d.id, ...d.data() })); setPosts(loaded);
                 });
             };
 
@@ -237,44 +205,23 @@
                 }
             }, [view, currentRoomId, user]);
 
-            const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
-                // 사용자가 입력한 API 키 사용 우선
-                const activeKey = geminiKey || globalApiKey;
-                const targetModel = apiModel; // 사용자가 선택한 모델 (gemini-2.5-pro 등) 그대로 사용
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${activeKey}`;
-                
-                let delays = [1000, 2000, 4000];
-                for (let i = 0; i < 3; i++) {
-                    try {
-                        const resp = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: customPrompt }] } }) });
-                        const data = await resp.json();
-                        if (!resp.ok) throw new Error(data.error?.message || "API Error");
-                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...)";
-                    } catch (e) {
-                        if (i === 2) return `통신 장애가 발생했어. 음! (${e.message})`;
-                        await new Promise(r => setTimeout(r, delays[i]));
-                    }
-                }
+            const fetchAPI = async (contents) => {
+                const activeModel = apiModel === 'gemini-2.5-pro' ? 'gemini-2.5-flash-preview-09-2025' : apiModel;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${geminiKey}`;
+                try {
+                    const resp = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } }) });
+                    const data = await resp.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...)";
+                } catch (e) { return "통신 장애 발생!"; }
             };
 
-            // ✨ 기능 1: 대화 분석
             const analyzeChat = async () => {
-                if (messages.length < 5) { alert("분석할 대화가 부족해! 조금 더 대화해봐."); return; }
+                if (messages.length < 5) return alert("대화가 부족해!");
                 setIsAnalyzing(true);
-                const history = messages.slice(-30).map(m => `${m.sender}: ${m.text}`).join('\n');
-                const prompt = `Analyze the current relationship dynamic between '연지' and '데이다라' based on the following conversation. Tell me what Deidara might be thinking. Respond in Korean.`;
-                const result = await fetchAPI([{role:'user', parts:[{text: `Conversation:\n${history}\n\nTask: ${prompt}`}]}]);
+                const history = messages.slice(-20).map(m => `${m.sender}: ${m.text}`).join('\n');
+                const result = await fetchAPI([{role:'user', parts:[{text: `Analyze relationship: ${history}`}]}]);
                 setAnalysisResult(result);
                 setIsAnalyzing(false); 
-            };
-
-            // ✨ 기능 2: 피드 답글 추천
-            const suggestReply = async (postContent) => {
-                setIsAnalyzing(true);
-                const prompt = `Following post was uploaded by Deidara: "${postContent}". As his close friend/crush '연지', suggest 3 short, flirty, or funny reply options that 연지 can leave on this post. Answer in simple list format. Respond in Korean.`;
-                const result = await fetchAPI([{role:'user', parts:[{text: prompt}]}]);
-                setSuggestedReplies(result);
-                setIsAnalyzing(false);
             };
 
             const handleLogin = () => {
@@ -290,44 +237,14 @@
             const handleSend = async () => {
                 if (!currentRoomId || !user || !inputText.trim()) return;
                 const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                const text = inputText; 
-                setInputText(''); setIsTyping(true);
+                const text = inputText; setInputText(''); setIsTyping(true);
                 try {
                     const roomRef = db.collection(getPath(user.uid, 'rooms')).doc(currentRoomId);
                     await roomRef.collection('messages').add({ sender: 'me', text, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    
-                    const history = messages.slice(-20).map(m => ({role: m.sender==='me'?'user':'model', parts:[{text: m.text}]})).concat({role:'user', parts:[{text}]});
-                    const resp = await fetchAPI(history);
-                    
+                    const resp = await fetchAPI(messages.slice(-20).map(m => ({role: m.sender==='me'?'user':'model', parts:[{text: m.text}]})).concat({role:'user', parts:[{text}]}));
                     await roomRef.collection('messages').add({ sender: 'deidara', text: resp, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                     await roomRef.set({ lastMessage: resp, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
                 } finally { setIsTyping(false); }
-            };
-
-            const handleAddPost = async () => {
-                if (!user) return;
-                setIsPosting(true);
-                try {
-                    const myContent = postInput.trim();
-                    const docRef = await db.collection(getPath(user.uid, 'posts')).add({ author: 'me', content: myContent, imageUrl: feedAttachedImage || null, createdAt: firebase.firestore.FieldValue.serverTimestamp(), comments: [] });
-                    setPostInput(''); setFeedAttachedImage(null);
-                    const resp = await fetchAPI([{role:'user', parts: [{text: `연지가 피드를 올렸어. 내용은 "${myContent || '(사진만 있음)'}" 야. 댓글 달아줘.`}]}]);
-                    await docRef.update({ comments: firebase.firestore.FieldValue.arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                } finally { setIsPosting(false); }
-            };
-
-            const handleAddComment = async (post) => {
-                if (!user) return;
-                const postId = post.id; const commentText = commentInputs[postId]?.trim(); 
-                if (!commentText) return;
-                setIsPosting(true);
-                try {
-                    const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
-                    await postRef.update({ comments: firebase.firestore.FieldValue.arrayUnion({ author: 'me', content: commentText, createdAt: Date.now() }) });
-                    setCommentInputs(prev => ({...prev, [postId]: ''}));
-                    const resp = await fetchAPI([{role:'user', parts: [{text: `연지의 댓글 "${commentText}"에 대댓글 남겨줘.`}]}]);
-                    await postRef.update({ comments: firebase.firestore.FieldValue.arrayUnion({ author: 'deidara', content: resp, createdAt: Date.now() }) });
-                } finally { setIsPosting(false); }
             };
 
             const handleImageUploadUI = async (e, mode, target) => {
@@ -342,15 +259,15 @@
                 }
             };
 
-            if (view === 'loading') return <div className="w-full h-full flex flex-col items-center justify-center bg-[#BACEE0]"><div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div><div className="font-black text-white/70 animate-pulse tracking-widest text-sm">DeiTalk Loading...</div></div>;
+            if (view === 'loading') return <div className="w-full h-full flex flex-col items-center justify-center bg-[#BACEE0]"><div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div><div className="font-black text-white/70 animate-pulse uppercase tracking-widest text-sm">DeiTalk Loading...</div></div>;
 
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0]">
                     <div className="w-24 h-24 rounded-[32px] bg-white mb-8 shadow-xl flex items-center justify-center text-4xl">🎨</div>
                     <h1 className="text-3xl font-black text-gray-800 mb-10 tracking-tight">DeiTalk</h1>
-                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform mb-3 text-gray-800">구글로 시작하기</button>
+                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform mb-4 text-gray-800">구글로 시작하기</button>
                     <button onClick={handleGuestLogin} className="w-full max-w-xs bg-black/10 py-4 rounded-2xl font-bold text-gray-600 text-sm active:scale-95 transition-transform">게스트로 입장</button>
-                    <p className="mt-8 text-[11px] text-gray-500 font-bold opacity-70 text-center leading-relaxed">구글 로그인이 차단되는 환경이라면<br/>게스트 버튼을 이용해주세요.</p>
+                    <p className="mt-8 text-[11px] text-gray-500 font-bold opacity-70 text-center">로그인이 안 될 경우 게스트 버튼을 이용해주세요.</p>
                 </div>
             );
 
@@ -362,19 +279,9 @@
                     {analysisResult && (
                         <div className="fixed inset-0 z-[4000] bg-black/80 flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setAnalysisResult(null)}>
                             <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl relative" onClick={e=>e.stopPropagation()}>
-                                <h3 className="text-xl font-black mb-4 text-orange-500">✨ 관계 분석 결과</h3>
+                                <h3 className="text-xl font-black mb-4 text-orange-500">✨ 관계 분석</h3>
                                 <div className="text-sm text-gray-700 leading-relaxed font-bold whitespace-pre-wrap">{analysisResult}</div>
-                                <button onClick={() => setAnalysisResult(null)} className="w-full mt-8 py-4 bg-[#BACEE0] rounded-2xl font-black text-white active:scale-95 transition-transform shadow-lg">확인 완료!</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {suggestedReplies && (
-                        <div className="fixed inset-0 z-[4000] bg-black/80 flex items-center justify-center p-6 backdrop-blur-md" onClick={() => setSuggestedReplies(null)}>
-                            <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl" onClick={e=>e.stopPropagation()}>
-                                <h3 className="text-xl font-black mb-4 text-blue-500">✨ 추천 답글 리스트</h3>
-                                <div className="text-sm text-gray-700 leading-relaxed font-bold whitespace-pre-wrap mb-6">{suggestedReplies}</div>
-                                <button onClick={() => setSuggestedReplies(null)} className="w-full py-4 bg-gray-100 rounded-2xl font-black text-gray-600 active:scale-95 transition-all">닫기</button>
+                                <button onClick={() => setAnalysisResult(null)} className="w-full mt-8 py-4 bg-[#BACEE0] rounded-2xl font-black text-white active:scale-95">확인</button>
                             </div>
                         </div>
                     )}
@@ -383,20 +290,20 @@
                         <div className="fixed inset-0 z-[2500] bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
                             <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
                                 <h2 className="text-xl font-bold mb-6 text-gray-800">설정</h2>
-                                <div className="bg-gray-100 p-4 rounded-2xl mb-6 border border-gray-200">
+                                <div className="bg-gray-100 p-4 rounded-2xl mb-6">
                                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1">User Info</p>
                                     <p className="text-xs font-bold text-gray-700 truncate">{user?.email || `Guest (UID: ${user?.uid?.substring(0,8)}...)`}</p>
                                 </div>
                                 <div className="space-y-5 mb-8">
                                     <div><p className="text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase font-bold">AI Model</p>
+                                        {/* 🌟 Gemini 2.5 Pro 선택지 복구 */}
                                         <select value={apiModel} onChange={e=>{ setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value); }} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 text-sm font-bold outline-none text-gray-800">
-                                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (최상위)</option>
+                                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                                             <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                                            <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash Preview</option>
                                             <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                                         </select>
                                     </div>
-                                    <div><p className="text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase font-bold">API Key (본인 키 입력)</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 outline-none text-sm font-semibold text-gray-800" /></div>
+                                    <div><p className="text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase font-bold">Gemini API Key</p><input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-3 outline-none text-sm font-semibold text-gray-800" /></div>
                                 </div>
                                 <button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-4 rounded-2xl font-bold mb-3 text-gray-900 shadow-sm active:scale-95 transition-transform">저장</button>
                                 <button onClick={() => { auth.signOut(); setShowSettings(false); }} className="w-full bg-gray-100 text-gray-500 py-4 rounded-2xl font-bold active:scale-95 transition-transform">로그아웃</button>
@@ -407,9 +314,9 @@
                     {view === 'main' ? (
                         <Fragment>
                             <header className="px-5 py-5 bg-white border-b border-gray-100 flex justify-between items-center sticky top-0 z-20 bg-white/90 backdrop-blur-md">
-                                <h1 className="font-extrabold text-xl tracking-tight text-gray-900">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1>
+                                <h1 className="font-extrabold text-xl tracking-tight text-gray-900 uppercase">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1>
                                 <div className="flex gap-4">
-                                    {activeTab === 'chat' && <button onClick={() => { const n = prompt("새로운 방 이름?"); if(n) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="text-xl active:scale-90 transition-transform">➕</button>}
+                                    {activeTab === 'chat' && <button onClick={() => { const n = prompt("새로운 방 이름?"); if(n) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="text-xl">➕</button>}
                                     <button onClick={() => setShowSettings(true)} className="text-xl active:scale-90 transition-transform">⚙️</button>
                                 </div>
                             </header>
@@ -433,60 +340,19 @@
                                 {activeTab === 'chat' && (
                                     <div className="flex-1 px-4 py-4 space-y-4">
                                         {chatRooms.map(room => (
-                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); window.history.pushState({ page: 'chatRoom' }, ''); }} className="flex items-center gap-5 p-4 bg-white border border-gray-100 rounded-[36px] cursor-pointer shadow-sm active:scale-95 transition-all">
+                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-4 bg-white border border-gray-100 rounded-[36px] cursor-pointer shadow-sm active:scale-95 transition-all">
                                                 <div className="w-[58px] h-[58px] rounded-[22px] bg-white border border-orange-50 flex items-center justify-center overflow-hidden shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
                                                 <div className="flex-1 min-w-0 pr-6"><h3 className="font-bold text-gray-900 truncate tracking-tight">{room.name}</h3><p className="text-[13px] text-gray-500 truncate mt-1 font-medium">{room.lastMessage || "대화가 없습니다."}</p></div>
-                                                <button onClick={(e) => { e.stopPropagation(); if(confirm("방 삭제?")) db.collection(getPath(user.uid, 'rooms')).doc(room.id).delete(); }} className="absolute right-6 p-2 text-red-400 bg-red-50 rounded-xl active:scale-90">✕</button>
+                                                <button onClick={(e) => { e.stopPropagation(); if(confirm("삭제?")) db.collection(getPath(user.uid, 'rooms')).doc(room.id).delete(); }} className="absolute right-6 p-2 text-red-400 bg-red-50 rounded-xl active:scale-90">✕</button>
                                             </div>
                                         ))}
-                                    </div>
-                                )}
-                                {activeTab === 'feed' && (
-                                    <div className="flex-1 bg-gray-50 pb-20 overflow-y-auto p-4 space-y-4">
-                                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6">
-                                            <textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="피드 남기기..." className="w-full bg-gray-50 rounded-2xl p-4 text-sm outline-none resize-none font-semibold mb-3 border border-transparent focus:border-gray-200 transition-colors" rows="3" />
-                                            <div className="flex justify-between items-center px-1">
-                                                <button onClick={() => feedFileInputRef.current.click()} className="p-2.5 bg-gray-100 text-gray-500 rounded-full active:scale-95 transition-all"><div className="w-5 h-5"><IconCamera /></div></button>
-                                                <input type="file" accept="image/*" ref={feedFileInputRef} onChange={async (e) => {const file = e.target.files[0]; if(file){const b64 = await compressImage(file); setFeedAttachedImage(b64); e.target.value='';}}} className="hidden" />
-                                                <button onClick={handleAddPost} disabled={isPosting} className="px-6 py-2.5 rounded-full text-sm font-black bg-blue-600 text-white active:scale-95 transition-transform">올리기</button>
-                                            </div>
-                                            {feedAttachedImage && <div className="mt-3 relative inline-block"><img src={feedAttachedImage} className="w-20 h-20 object-cover rounded-xl shadow-md" /><button onClick={() => setFeedAttachedImage(null)} className="absolute -top-1 -right-1 bg-black text-white rounded-full w-5 h-5 text-[10px] font-black">✕</button></div>}
-                                        </div>
-                                        {posts.length > 0 ? posts.map(post=>(
-                                            <div key={post.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 msg-anim">
-                                                <div className="flex items-center gap-3 mb-4">
-                                                    <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-50">{post.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
-                                                    <div className="flex-1 min-w-0"><div className="font-black text-gray-800 text-[15px]">{post.author==='me'?'연지':'데이다라'}</div><div className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{safeDateStr(post.createdAt)}</div></div>
-                                                    <button onClick={() => { if(confirm("삭제할까요?")) db.collection(getPath(user.uid, 'posts')).doc(post.id).delete(); }} className="p-1 text-gray-300"><div className="w-4 h-4"><IconTrash /></div></button>
-                                                </div>
-                                                {post.imageUrl && <img src={post.imageUrl} onClick={() => setShowFullImage(post.imageUrl)} className="w-full h-auto rounded-2xl mb-4 border border-gray-50 active:opacity-90" />}
-                                                {post.content && <p className="text-sm font-bold text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>}
-                                                {!isAnalyzing && post.author !== 'me' && (
-                                                    <button onClick={() => suggestReply(post.content)} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-black active:scale-95 transition-transform mb-4">✨ 답글 뭐 달지?</button>
-                                                )}
-                                                <div className="bg-gray-50 rounded-2xl p-4 space-y-4">
-                                                    {(post.comments||[]).map((c,i)=>(
-                                                        <div key={i} className="flex gap-3">
-                                                            <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-100 bg-white shrink-0">{c.author==='me'?renderProfilePicCommon(myProfileImgUrl):renderProfilePicCommon(profileImgUrl)}</div>
-                                                            <div className="flex-1"><span className="font-bold text-xs text-gray-900 block">{c.author==='me'?'연지':'데이다라'}</span><span className="text-xs text-gray-700 font-bold">{c.content}</span></div>
-                                                        </div>
-                                                    ))}
-                                                    <div className="flex gap-2 items-center">
-                                                        <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs(prev=>({...prev,[post.id]:e.target.value}))} placeholder="댓글 달기..." className="flex-1 bg-white border border-gray-100 rounded-full px-4 py-2.5 text-xs outline-none font-bold" onKeyPress={e=>e.key==='Enter'&&handleAddComment(post)} />
-                                                        <button disabled={isPosting} onClick={()=>handleAddComment(post)} className="font-bold text-xs text-blue-600 px-2 active:scale-90">게시</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )) : (
-                                            <div className="h-full flex items-center justify-center text-gray-400 font-bold italic py-20">게시물이 없습니다.</div>
-                                        )}
                                     </div>
                                 )}
                             </main>
                         </Fragment>
                     ) : (
                         <Fragment>
-                            {/* 🌟 채팅방: 배경 파란색 고정 및 여백 완벽 제거 */}
+                            {/* 🌟 채팅방: 파란 배경색 `#BACEE0` 고정 및 여백 완벽 제거 */}
                             <header className="px-3 py-3 flex items-center justify-between border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20 backdrop-blur-md">
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setView('main')} className="p-2 active:bg-black/5 rounded-full font-black text-gray-700">←</button>
@@ -503,7 +369,7 @@
                                         <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
                                             {msg.sender !== 'me' && <div className="w-10 h-10 rounded-[14px] bg-white mr-3 shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>}
                                             <div className="flex flex-col">
-                                                {msg.sender !== 'me' && <span className="text-[12px] text-gray-600 mb-1 ml-1 font-bold">데이다라</span>}
+                                                {msg.sender !== 'me' && <span className="text-[12px] text-gray-600 mb-1 ml-1 font-bold uppercase">데이다라</span>}
                                                 <div className={`px-5 py-3.5 rounded-[24px] text-[15px] shadow-sm font-bold tracking-tight ${msg.sender === 'me' ? 'bg-[#FEE500] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm'}`}>{msg.text}</div>
                                             </div>
                                         </div>
@@ -521,8 +387,8 @@
                     )}
 
                     {view === 'main' && (
-                        <nav className="absolute bottom-0 w-full bg-white/95 border-t border-gray-100 flex justify-around items-center h-[82px] pb-safe z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md">
-                            <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='friends'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-xl">👤</span><span className="text-[10px] font-black uppercase tracking-tighter">Home</span></div>
+                        <nav className="absolute bottom-0 w-full bg-white/95 border-t border-gray-100 flex justify-around items-center h-[82px] pb-safe z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md px-6">
+                            <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='friends'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-xl">👤</span><span className="text-[10px] font-black uppercase tracking-tighter">Friends</span></div>
                             <div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='chat'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-xl">💬</span><span className="text-[10px] font-black uppercase tracking-tighter">Chat</span></div>
                             <div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='feed'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-xl">📋</span><span className="text-[10px] font-black uppercase tracking-tighter">Feed</span></div>
                         </nav>
