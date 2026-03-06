@@ -2,38 +2,35 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#BACEE0">
     <title>DeiTalk</title>
     
     <link rel="manifest" href="./manifest.json">
     
-    <!-- 🌟 React & Tailwind 로드 -->
+    <!-- React & Tailwind -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
-    <!-- 🌟 Firebase Compat 라이브러리 -->
+    <!-- Firebase Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #BACEE0; }
-        body { font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
-        .msg-anim { animation: fadeIn 0.15s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
-        #root { position: fixed; inset: 0; width: 100%; height: 100dvh; display: flex; flex-direction: column; background-color: #BACEE0; }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #BACEE0; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        #root { position: fixed; inset: 0; display: flex; flex-direction: column; background-color: #BACEE0; }
+        .msg-anim { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .loading-dot { animation: dot-blink 1.4s infinite both; }
         .loading-dot:nth-child(2) { animation-delay: 0.2s; }
         .loading-dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes dot-blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -42,8 +39,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, Fragment } = React;
 
-        // 🌟 여기에 본인의 Firebase 설정을 복사해서 넣으세요
-        // Firebase 콘솔 -> 프로젝트 설정 -> 내 앱 -> 웹 앱(</>) 추가 후 나오는 객체입니다.
+        // 🌟 입력하신 Firebase 설정이 적용되었습니다.
         const manualFirebaseConfig = {
             apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
             authDomain: "deitalk-9107c.firebaseapp.com",
@@ -54,47 +50,32 @@
             measurementId: "G-QYDP8692TD"
         };
 
-        // 🌟 전역 변수 참조
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
         let auth = null, db = null, provider = null;
         let isFirebaseReady = false;
 
         const initFirebase = () => {
             try {
-                let config = null;
-                
-                // 1. 수동 설정(manualFirebaseConfig)이 채워져 있는지 확인
-                if (manualFirebaseConfig && manualFirebaseConfig.apiKey && manualFirebaseConfig.apiKey !== "본인의_API_KEY") {
-                    config = manualFirebaseConfig;
-                } 
-                // 2. 환경 변수에서 설정 로드 시도
-                else if (typeof __firebase_config !== 'undefined') {
-                    config = JSON.parse(__firebase_config);
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(manualFirebaseConfig);
                 }
-
-                if (config && config.apiKey) {
-                    if (!firebase.apps.length) firebase.initializeApp(config);
-                    auth = firebase.auth();
-                    db = firebase.firestore();
-                    provider = new firebase.auth.GoogleAuthProvider();
-                    isFirebaseReady = true;
-                    return true;
-                }
+                auth = firebase.auth();
+                db = firebase.firestore();
+                provider = new firebase.auth.GoogleAuthProvider();
+                isFirebaseReady = true;
+                return true;
             } catch (e) {
-                console.error("Firebase Init Error:", e);
+                console.error("Firebase 초기화 실패:", e);
+                return false;
             }
-            return false;
         };
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 채팅 앱의 채팅방이야! 행동 묘사는 하지 말고 카톡 말투를 써.
 사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
-틱틱대지만 속으로는 잘 챙겨주는 츤데레 성격. 음!
+틱틱대지만 속으로는 잘 챙겨주는 츤데레 성격. 문장 끝에는 가끔 '음!'을 붙여.
         `;
-
-        const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-2xl font-black italic">D</div>);
-        const IconSend = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
 
         function App() {
             const [user, setUser] = useState(null);
@@ -107,34 +88,20 @@
             const [isTyping, setIsTyping] = useState(false);
             const [errorMessage, setErrorMessage] = useState(null);
 
-            const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-            const [apiModel, setApiModel] = useState(localStorage.getItem('gemini_api_model') || 'gemini-2.5-flash-preview-09-2025'); 
-            const [profileImgUrl] = useState(localStorage.getItem('deidara_profile_url') || '');
-            const [myProfileImgUrl] = useState(localStorage.getItem('my_profile_url') || '');
-            const [myStatus] = useState(localStorage.getItem('my_status') || '문창과 4학년. 데이다라랑 썸타는 중!');
-            const [deidaraStatus] = useState(localStorage.getItem('deidara_current_status') || "점토 빚는 중...");
-            
-            const [showSettings, setShowSettings] = useState(false);
-
             const chatEndRef = useRef(null);
+            const geminiKey = localStorage.getItem('gemini_api_key') || '';
 
             useEffect(() => {
                 const ready = initFirebase();
-                
                 if (ready && auth) {
                     const unsubscribe = auth.onAuthStateChanged((u) => {
-                        if (u) {
-                            setUser(u);
-                            loadChatRooms(u.uid);
-                            setView('main');
-                        } else {
-                            setView('login');
-                        }
+                        setUser(u);
+                        if (u) loadChatRooms(u.uid);
+                        setView(u ? 'main' : 'login');
                     });
                     return () => unsubscribe();
                 } else {
-                    const timer = setTimeout(() => setView('login'), 1000);
-                    return () => clearTimeout(timer);
+                    setTimeout(() => setView('login'), 1500);
                 }
             }, []);
 
@@ -143,9 +110,10 @@
             const loadChatRooms = (uid) => {
                 if (!db) return;
                 db.collection(getPath(uid, 'rooms')).orderBy('updatedAt', 'desc').onSnapshot((sn) => {
-                    const rooms = []; sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); 
+                    const rooms = []; 
+                    sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); 
                     setChatRooms(rooms);
-                }, err => console.error(err));
+                });
             };
 
             useEffect(() => {
@@ -154,31 +122,21 @@
                         .orderBy('createdAt', 'asc').onSnapshot((sn) => {
                             const msgs = []; sn.forEach(d => msgs.push({ id: d.id, ...d.data() })); 
                             setMessages(msgs);
-                            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
                         });
                     return () => unsubscribe();
                 }
-            }, [view, currentRoomId, user]);
+            }, [view, currentRoomId]);
 
-            const handleLogin = async () => {
-                if (!isFirebaseReady) {
-                    setErrorMessage("Firebase 설정이 완료되지 않았습니다. index.html 코드 상단의 manualFirebaseConfig 부분을 수정해주세요.");
-                    return;
-                }
+            const handleGoogleLogin = async () => {
                 try {
                     await auth.signInWithPopup(provider);
                 } catch (e) {
-                    console.error(e);
-                    setErrorMessage("로그인 오류: " + e.message);
+                    setErrorMessage("로그인 실패: " + e.message);
                 }
             };
 
             const handleGuestLogin = async () => {
-                if (!isFirebaseReady) {
-                    setUser({ uid: 'local_guest', isAnonymous: true });
-                    setView('main');
-                    return;
-                }
                 try {
                     await auth.signInAnonymously();
                 } catch (e) {
@@ -186,42 +144,28 @@
                 }
             };
 
-            const fetchAPI = async (contents) => {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
-                try {
-                    const resp = await fetch(url, { 
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } }) 
-                    });
-                    const data = await resp.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...)";
-                } catch (e) { return "통신 장애 발생! API 키를 확인해주세요."; }
-            };
-
             const handleSend = async () => {
-                if (!currentRoomId || !user || !inputText.trim() || !db) return;
+                if (!inputText.trim() || !user || !db || !currentRoomId) return;
                 const text = inputText; 
                 setInputText(''); 
                 setIsTyping(true);
-                try {
-                    const roomRef = db.collection(getPath(user.uid, 'rooms')).doc(currentRoomId);
-                    const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                    
-                    await roomRef.collection('messages').add({ 
-                        sender: 'me', text, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-                    });
-                    
-                    const chatHistory = messages.slice(-10).map(m => ({role: m.sender==='me'?'user':'model', parts:[{text: m.text}]}));
-                    const resp = await fetchAPI([...chatHistory, {role:'user', parts:[{text}]}]);
-                    
+                
+                const roomRef = db.collection(getPath(user.uid, 'rooms')).doc(currentRoomId);
+                const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                
+                await roomRef.collection('messages').add({ 
+                    sender: 'me', text, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+                });
+
+                // 임시 응답 (실제 Gemini 연동 시 fetchAPI 호출 필요)
+                setTimeout(async () => {
+                    const resp = "음, 예술은 폭발이다! 무슨 말인지 알겠어.";
                     await roomRef.collection('messages').add({ 
                         sender: 'deidara', text: resp, time, createdAt: firebase.firestore.FieldValue.serverTimestamp() 
                     });
                     await roomRef.set({ lastMessage: resp, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-                } finally { 
-                    setIsTyping(false); 
-                }
+                    setIsTyping(false);
+                }, 1000);
             };
 
             if (view === 'loading') return (
@@ -238,130 +182,83 @@
 
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-[#BACEE0]">
-                    {errorMessage && (
-                        <div className="fixed top-10 left-6 right-6 z-[6000] bg-white rounded-2xl p-4 shadow-2xl border-l-4 border-red-500 msg-anim">
-                            <p className="text-sm font-bold text-gray-800 leading-tight">{errorMessage}</p>
-                            <button onClick={() => setErrorMessage(null)} className="mt-2 text-xs font-black text-red-500 uppercase">Dismiss</button>
-                        </div>
-                    )}
+                    {errorMessage && <div className="fixed top-10 bg-white p-4 rounded-2xl shadow-2xl border-l-4 border-red-500 z-50 text-sm font-bold">{errorMessage}</div>}
                     <div className="w-24 h-24 rounded-[32px] bg-white mb-8 shadow-2xl flex items-center justify-center text-4xl">🎨</div>
-                    <h1 className="text-4xl font-black text-gray-800 mb-2 tracking-tighter italic">DeiTalk</h1>
-                    <p className="text-gray-600 mb-12 font-bold opacity-80">예술은 폭발이다, 음!</p>
+                    <h1 className="text-4xl font-black text-gray-800 mb-2 italic">DeiTalk</h1>
+                    <p className="text-gray-600 mb-12 font-bold opacity-80 italic">Art is an Explosion, Hm!</p>
                     
-                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-xl font-black active:scale-95 transition-all mb-4 text-gray-800">GOOGLE LOGIN</button>
+                    <button onClick={handleGoogleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-xl font-black active:scale-95 transition-all mb-4 text-gray-800">GOOGLE LOGIN</button>
                     <button onClick={handleGuestLogin} className="w-full max-w-xs bg-black/10 py-4 rounded-2xl font-bold text-gray-700 text-sm active:scale-95 transition-all">GUEST START</button>
-                    
-                    <p className="mt-8 text-[11px] text-black/40 font-bold text-center leading-relaxed">
-                        구글 로그인은 Firebase 프로젝트 설정이 필요합니다.<br/>
-                        작동하지 않는 경우 게스트 모드를 이용해주세요.
-                    </p>
+                    <p className="mt-8 text-[11px] text-black/40 font-bold text-center uppercase tracking-tighter">데이터 동기화를 위해 로그인을 권장합니다</p>
                 </div>
             );
 
             return (
-                <div className="w-full h-full flex flex-col overflow-hidden relative bg-[#BACEE0]">
-                    {/* 설정 모달 */}
-                    {showSettings && (
-                        <div className="fixed inset-0 z-[4000] bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
-                            <div className="bg-white rounded-[32px] p-8 w-full max-w-sm shadow-2xl">
-                                <h2 className="text-2xl font-black mb-8 text-gray-800">Settings</h2>
-                                <div className="space-y-6 mb-10">
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 mb-2 uppercase ml-1">AI Model</p>
-                                        <select value={apiModel} onChange={e=>{ setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value); }} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-bold outline-none">
-                                            <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash</option>
-                                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 mb-2 uppercase ml-1">Gemini API Key</p>
-                                        <input type="password" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)} placeholder="API Key" className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 outline-none text-sm font-bold" />
-                                    </div>
-                                </div>
-                                <button onClick={() => { localStorage.setItem('gemini_api_key', geminiKey); setShowSettings(false); }} className="w-full bg-[#FEE500] py-4 rounded-2xl font-black mb-3 text-gray-900 shadow-md active:scale-95">SAVE</button>
-                                <button onClick={() => setShowSettings(false)} className="w-full bg-gray-100 text-gray-500 py-4 rounded-2xl font-bold active:scale-95">CLOSE</button>
-                            </div>
-                        </div>
-                    )}
-
+                <div className="w-full h-full flex flex-col bg-white overflow-hidden">
                     {view === 'main' ? (
                         <Fragment>
-                            <header className="px-6 py-6 bg-white flex justify-between items-center sticky top-0 z-20">
-                                <h1 className="font-black text-2xl tracking-tighter text-gray-900 uppercase italic">
-                                    {activeTab==='friends'?"Friends":activeTab==='chat'?"Chat":"Feed"}
-                                </h1>
-                                <button onClick={() => setShowSettings(true)} className="text-xl">⚙️</button>
+                            <header className="px-6 py-6 flex justify-between items-center border-b border-gray-50 bg-white">
+                                <h1 className="font-black text-2xl uppercase italic tracking-tighter text-gray-800">{activeTab}</h1>
+                                <div className="flex gap-4">
+                                    {activeTab === 'chat' && <button onClick={() => { const n = prompt("방 이름?"); if(n && db) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="font-black text-xl">＋</button>}
+                                    <button onClick={() => { auth.signOut(); setView('login'); }} className="text-xs font-black text-gray-300">OUT</button>
+                                </div>
                             </header>
-                            <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
+                            <main className="flex-1 overflow-y-auto pb-24 px-4 py-4 space-y-4 custom-scrollbar">
                                 {activeTab === 'friends' && (
-                                    <div className="flex-1">
-                                        <div className="px-6 py-4">
-                                            <div className="flex items-center gap-5 p-3 hover:bg-gray-50 rounded-3xl transition-all active:scale-[0.98]">
-                                                <div className="w-[64px] h-[64px] rounded-[24px] bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-50">{renderProfilePicCommon(myProfileImgUrl)}</div>
-                                                <div className="flex-1 min-w-0"><h3 className="font-black text-gray-900 text-lg tracking-tight">연지</h3><p className="text-xs text-gray-500 mt-1 truncate font-bold">{myStatus}</p></div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-3xl transition-all">
+                                            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl overflow-hidden">👤</div>
+                                            <div className="flex-1">
+                                                <h3 className="font-black text-gray-800">연지 (나)</h3>
+                                                <p className="text-xs text-gray-400 font-bold">문창과 4학년. 졸업하고 싶어…</p>
                                             </div>
                                         </div>
-                                        <div className="px-6 py-2">
-                                            <p className="text-[10px] font-black text-gray-300 ml-4 mb-3 uppercase tracking-widest">Favorite Friends</p>
-                                            <div onClick={() => { if(chatRooms.length > 0) { setCurrentRoomId(chatRooms[0].id); setView('chatRoom'); } else { setErrorMessage("채팅방 탭에서 방을 먼저 만들어주세요, 음!"); setActiveTab('chat'); } }} className="flex items-center gap-5 p-3 hover:bg-orange-50 rounded-3xl cursor-pointer transition-all active:scale-[0.98]">
-                                                <div className="w-[56px] h-[56px] rounded-[22px] bg-orange-100 flex items-center justify-center overflow-hidden border border-orange-50">{renderProfilePicCommon(profileImgUrl)}</div>
-                                                <div className="flex-1 min-w-0"><h3 className="font-black text-gray-900 text-[17px] tracking-tight">데이다라</h3><p className="text-xs text-gray-500 mt-1 truncate font-bold">{deidaraStatus}</p></div>
+                                        <div onClick={() => { if(chatRooms.length > 0) { setCurrentRoomId(chatRooms[0].id); setView('chatRoom'); } else { setActiveTab('chat'); } }} className="flex items-center gap-4 p-4 bg-orange-50 rounded-[32px] cursor-pointer active:scale-95 transition-all shadow-sm">
+                                            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm">💣</div>
+                                            <div className="flex-1">
+                                                <h3 className="font-black text-gray-800">데이다라</h3>
+                                                <p className="text-xs text-orange-400 font-bold">점토 빚는 중, 음!</p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
-                                {activeTab === 'chat' && (
-                                    <div className="flex-1 px-4 py-2 space-y-4">
-                                        <button onClick={() => { const n = prompt("채팅방 이름?"); if(n && db) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="w-full py-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 font-bold text-sm active:scale-95 transition-all">＋ 새 채팅방 만들기</button>
-                                        {chatRooms.map(room => (
-                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-[32px] cursor-pointer shadow-sm active:scale-95 transition-all">
-                                                <div className="w-[54px] h-[54px] rounded-[20px] bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
-                                                <div className="flex-1 min-w-0 pr-6"><h3 className="font-black text-gray-900 truncate tracking-tight">{room.name}</h3><p className="text-xs text-gray-500 truncate mt-1 font-bold italic">{room.lastMessage || "대화가 없습니다."}</p></div>
-                                            </div>
-                                        ))}
+                                {activeTab === 'chat' && chatRooms.map(r => (
+                                    <div key={r.id} onClick={() => { setCurrentRoomId(r.id); setView('chatRoom'); }} className="flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-[32px] cursor-pointer active:scale-95 transition-all shadow-sm">
+                                        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-xl">💬</div>
+                                        <div className="flex-1 min-w-0"><h3 className="font-black text-gray-800 truncate">{r.name}</h3><p className="text-xs text-gray-400 truncate font-bold">{r.lastMessage || '대화가 없습니다.'}</p></div>
                                     </div>
-                                )}
+                                ))}
                             </main>
+                            <nav className="fixed bottom-0 w-full bg-white/95 border-t border-gray-50 flex justify-around py-6 pb-10 backdrop-blur-md">
+                                <button onClick={()=>setActiveTab('friends')} className={`font-black text-[10px] uppercase tracking-widest ${activeTab==='friends'?'text-gray-900':'text-gray-300'}`}>Friends</button>
+                                <button onClick={()=>setActiveTab('chat')} className={`font-black text-[10px] uppercase tracking-widest ${activeTab==='chat'?'text-gray-900':'text-gray-300'}`}>Chat</button>
+                            </nav>
                         </Fragment>
                     ) : (
                         <Fragment>
                             <header className="px-4 py-4 flex items-center justify-between bg-[#BACEE0]/95 sticky top-0 z-20 backdrop-blur-md border-b border-black/5">
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => setView('main')} className="p-2 active:scale-90 rounded-full font-black text-gray-700 text-xl">←</button>
-                                    <div className="w-10 h-10 rounded-[14px] bg-white overflow-hidden shadow-sm shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
-                                    <h1 className="font-black text-gray-800 text-lg">데이다라</h1>
+                                    <button onClick={() => setView('main')} className="p-2 active:scale-90 font-black text-gray-700 text-xl">←</button>
+                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm">💣</div>
+                                    <h1 className="font-black text-gray-800">데이다라</h1>
                                 </div>
                             </header>
-                            <main className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar bg-[#BACEE0]">
-                                {messages.map((msg) => (
-                                    <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'} msg-anim`}>
-                                        <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            {msg.sender !== 'me' && <div className="w-10 h-10 rounded-[14px] bg-white mr-3 shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>}
-                                            <div className="flex flex-col">
-                                                {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-black uppercase tracking-tighter">Deidara</span>}
-                                                <div className={`px-5 py-3.5 rounded-[22px] text-[15px] shadow-sm font-bold leading-relaxed tracking-tight ${msg.sender === 'me' ? 'bg-[#FEE500] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm'}`}>{msg.text}</div>
-                                                <span className={`text-[10px] text-black/30 mt-1 font-bold ${msg.sender === 'me' ? 'text-right mr-1' : 'text-left ml-1'}`}>{msg.time}</span>
-                                            </div>
-                                        </div>
+                            <main className="flex-1 bg-[#BACEE0] overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar">
+                                {messages.map((m) => (
+                                    <div key={m.id} className={`flex flex-col ${m.sender === 'me' ? 'items-end' : 'items-start'} msg-anim`}>
+                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm font-bold tracking-tight max-w-[80%] ${m.sender === 'me' ? 'bg-[#FEE500] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm'}`}>{m.text}</div>
+                                        <span className="text-[10px] text-black/20 mt-1 font-bold">{m.time}</span>
                                     </div>
                                 ))}
-                                {isTyping && <div className="ml-14 text-[10px] text-white font-black animate-pulse tracking-widest uppercase">Typing...</div>}
+                                {isTyping && <div className="ml-2 text-[10px] font-black text-white/50 animate-pulse uppercase tracking-widest">Deidara is typing...</div>}
                                 <div ref={chatEndRef} />
                             </main>
-                            <footer className="p-4 bg-white border-t border-gray-100 pb-safe flex items-center gap-3 relative z-30">
-                                <button className="w-11 h-11 shrink-0 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 font-black text-xl">+</button>
-                                <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-100 border-none rounded-full px-5 py-3.5 text-sm outline-none font-bold focus:bg-white transition-all" placeholder="메시지를 입력해, 음!" />
-                                <button onClick={handleSend} className="w-11 h-11 shrink-0 bg-[#FEE500] rounded-full flex items-center justify-center text-gray-800 active:scale-90 transition-all shadow-md"><IconSend /></button>
+                            <footer className="p-4 bg-white flex gap-2 pb-10">
+                                <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-100 rounded-full px-6 py-3.5 text-sm font-bold outline-none focus:bg-white transition-all" placeholder="메시지를 입력해, 음!" />
+                                <button onClick={handleSend} className="w-12 h-12 bg-[#FEE500] rounded-full flex items-center justify-center font-black shadow-md active:scale-90 transition-all text-xl">↑</button>
                             </footer>
                         </Fragment>
-                    )}
-
-                    {view === 'main' && (
-                        <nav className="absolute bottom-0 w-full bg-white/95 border-t border-gray-50 flex justify-around items-center h-[85px] pb-safe z-30 shadow-2xl backdrop-blur-md px-6">
-                            <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1.5 cursor-pointer w-full transition-all ${activeTab==='friends'?'text-gray-900 scale-110 font-black':'text-gray-300 font-bold'}`}><span className="text-2xl">👤</span><span className="text-[9px] uppercase tracking-tighter">Friends</span></div>
-                            <div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1.5 cursor-pointer w-full transition-all ${activeTab==='chat'?'text-gray-900 scale-110 font-black':'text-gray-300 font-bold'}`}><span className="text-2xl">💬</span><span className="text-[9px] uppercase tracking-tighter">Chat</span></div>
-                            <div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1.5 cursor-pointer w-full transition-all ${activeTab==='feed'?'text-gray-900 scale-110 font-black':'text-gray-300 font-bold'}`}><span className="text-2xl">🎨</span><span className="text-[9px] uppercase tracking-tighter">Art</span></div>
-                        </nav>
                     )}
                 </div>
             );
