@@ -16,10 +16,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
-    <!-- Firebase SDKs (PWA 대응을 위해 Redirect 관련 함수 추가) -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -29,7 +29,7 @@
         const provider = new GoogleAuthProvider();
 
         window.firebaseAPI = { 
-            auth, db, provider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken,
+            auth, db, provider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken,
             collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy, deleteDoc, addDoc, serverTimestamp, getDocs, limit, arrayUnion, arrayRemove, getDoc 
         };
     </script>
@@ -41,8 +41,6 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
         .msg-anim { animation: fadeIn 0.15s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .slide-in { animation: slideInRight 0.3s ease-out forwards; }
-        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
         .profile-anim { animation: profileUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes profileUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .text-shadow { text-shadow: 0px 2px 4px rgba(0,0,0,0.3); }
@@ -70,7 +68,6 @@
 - 초성 앞뒤 마침표 금지. 말버릇 '음'은 문장 끝에 가끔 붙여.
         `;
 
-        // 초고화질 이미지 품질 유지 (2560px 상향)
         const compressBase64Image = (base64Str, maxSize = 2560, quality = 0.95) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -78,11 +75,8 @@
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let width = img.width, height = img.height;
-                    if (width > height) { 
-                        if (width > maxSize) { height *= maxSize / width; width = maxSize; } 
-                    } else { 
-                        if (height > maxSize) { width *= maxSize / height; height = maxSize; } 
-                    }
+                    if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } 
+                    else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
                     canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.imageSmoothingEnabled = true;
@@ -113,17 +107,14 @@
 
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-1/2 h-1/2 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
 
-        // 아이콘 컴포넌트들 생략 방지 (필수 아이콘들 포함)
         const IconTrash = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
         const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
         const IconCamera = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>;
-        const IconPhoneOutline = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>;
         const IconPhoneFilled = () => <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.73 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>;
         const IconSend = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
 
         const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab }) => {
             const isMe = profileTarget === 'me';
-            const [editStatus, setEditStatus] = useState(isMe ? myStatus : deidaraStatus);
             return (
                 <div className="fixed inset-0 z-[2500] bg-gray-900 flex flex-col justify-between profile-anim overflow-hidden" style={{ backgroundImage: `url('${isMe ? (myBgImgUrl || '') : (bgImgUrl || '')}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
                     <div className="absolute inset-0 bg-black/40 z-0"></div>
@@ -140,7 +131,7 @@
                         </div>
                         <h2 className="text-2xl font-extrabold mb-1 text-shadow tracking-tight">{isMe ? '연지' : '데이다라'}</h2>
                         <div className="w-full max-w-[280px] mb-10 mt-2 flex justify-center mx-auto">
-                            {isEditingProfile && isMe ? <input type="text" defaultValue={editStatus} onBlur={(e) => { setMyStatus(e.target.value); localStorage.setItem('my_status', e.target.value); }} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2.5 text-sm text-white text-center outline-none" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-5 py-2.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
+                            {isEditingProfile && isMe ? <input type="text" defaultValue={myStatus} onBlur={(e) => { setMyStatus(e.target.value); localStorage.setItem('my_status', e.target.value); }} className="w-full bg-black/40 border border-white/30 rounded-xl px-4 py-2.5 text-sm text-white text-center outline-none" placeholder="상태 메시지" /> : <p className="text-[14px] opacity-90 text-shadow bg-black/30 px-5 py-2.5 rounded-full inline-block backdrop-blur-md">{isMe ? myStatus : deidaraStatus}</p>}
                         </div>
                         <div className="w-full max-w-[280px] border-t border-white/20 pt-8 flex justify-around mx-auto">
                             {isEditingProfile ? <button onClick={() => setIsEditingProfile(false)} className="bg-[#FEE500] text-gray-900 font-bold px-10 py-3 rounded-full w-full active:scale-95 transition-all shadow-lg">완료</button> : !isMe && <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95" onClick={() => { setProfileTarget(null); setActiveTab('chat'); }}><div className="text-white text-3xl">💬</div><span className="text-[12px] font-bold text-shadow">1:1 채팅</span></div>}
@@ -159,14 +150,12 @@
             const [currentRoomId, setCurrentRoomId] = useState(null);
             const [messages, setMessages] = useState([]);
             const [posts, setPosts] = useState([]);
-            
             const [inputText, setInputText] = useState('');
             const [postInput, setPostInput] = useState('');
             const [feedAttachedImage, setFeedAttachedImage] = useState(null);
             const [isPosting, setIsPosting] = useState(false);
             const [isTyping, setIsTyping] = useState(false);
             const [commentInputs, setCommentInputs] = useState({});
-
             const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
             const [apiModel, setApiModel] = useState(localStorage.getItem('gemini_api_model') || 'gemini-2.5-pro'); 
             const [profileImgUrl, setProfileImgUrl] = useState(localStorage.getItem('deidara_profile_url') || '');
@@ -175,45 +164,35 @@
             const [myBgImgUrl, setMyBgImgUrl] = useState(localStorage.getItem('my_bg_url') || '');
             const [myStatus, setMyStatus] = useState(localStorage.getItem('my_status') || '문창과 4학년. 데이다라랑 썸타는 중!');
             const [deidaraStatus, setDeidaraStatus] = useState(localStorage.getItem('deidara_current_status') || "점토 빚는 중...");
-
             const [showSettings, setShowSettings] = useState(!localStorage.getItem('gemini_api_key'));
             const [notifEnabled, setNotifEnabled] = useState(localStorage.getItem('notif_enabled') !== 'false');
-            
             const [profileTarget, setProfileTarget] = useState(null); 
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
-            const [showAttachMenu, setShowAttachMenu] = useState(false);
-            const [showCallModal, setShowCallModal] = useState(false);
-            const [callCaller, setCallCaller] = useState('me');
-            const [callDuration, setCallDuration] = useState('0:08');
-            const [callContent, setCallContent] = useState('');
             const [alertMsg, setAlertMsg] = useState(null);
 
             const chatEndRef = useRef(null);
-            const chatFileInputRef = useRef(null);
             const feedFileInputRef = useRef(null);
 
-            // 🌟 PWA 환경 인증 핵심 로직: Redirect 대응
+            // 🌟 강제 입장 로직: 팝업이 막히더라도 익명으로라도 입장을 시킵니다.
+            const forceGuestAuth = async (authObj) => {
+                const { signInAnonymously, signInWithCustomToken } = window.firebaseAPI;
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(authObj, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(authObj);
+                    }
+                } catch (e) { console.error(e); }
+            };
+
             useEffect(() => {
                 if (!window.firebaseAPI) return;
-                const { auth, db: fdb, onAuthStateChanged, getRedirectResult, signInAnonymously, signInWithCustomToken } = window.firebaseAPI;
+                const { auth, db: fdb, onAuthStateChanged, getRedirectResult } = window.firebaseAPI;
                 setDb(fdb);
 
-                // 리다이렉트 후 돌아왔을 때 결과 확인
-                getRedirectResult(auth).catch(e => console.error("Redirect Login Error", e));
-
-                // 초기 진입 시 이미 토큰이 있는 경우 인증 처리
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            // 토큰이 없더라도 스탠드얼론 모드라면 익명 로그인을 통해 앱 진입 보장
-                            if (!auth.currentUser) await signInAnonymously(auth);
-                        }
-                    } catch (e) { console.error(e); }
-                };
-                initAuth();
+                // 리다이렉트 로그인 결과 확인
+                getRedirectResult(auth).catch(e => console.error(e));
 
                 const unsubscribe = onAuthStateChanged(auth, (u) => {
                     if (u) {
@@ -223,7 +202,11 @@
                         setView('login');
                     }
                 });
-                return () => unsubscribe();
+
+                // 만약 페이지 진입 3초 후에도 아무런 인증이 안 되어있다면 자동으로 시도
+                const timer = setTimeout(() => { if(!auth.currentUser) forceGuestAuth(auth); }, 3000);
+
+                return () => { unsubscribe(); clearTimeout(timer); };
             }, []);
 
             const getColPath = (uid, col) => `artifacts/${appId}/users/${uid}/${col}`;
@@ -256,33 +239,34 @@
                 }
             }, [view, currentRoomId, user, db]);
 
-            // API 호출 로직 (Gemini 2.5 Pro 맵핑 지원)
             const fetchAPI = async (contents, customPrompt = SYSTEM_PROMPT) => {
                 const actualModel = apiModel === 'gemini-2.5-pro' ? 'gemini-2.5-flash-preview-09-2025' : apiModel;
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${apiKey}`;
                 let lastError = "";
-                const delays = [1000, 2000, 4000];
                 for (let attempt = 0; attempt < 3; attempt++) {
                     try {
                         const resp = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: customPrompt }] } }) });
                         const data = await resp.json();
                         if (!resp.ok) throw new Error(data.error?.message || "API Error");
-                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...)";
-                    } catch (err) { lastError = err.message; await new Promise(r => setTimeout(r, delays[attempt])); }
+                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵...)";
+                    } catch (err) { lastError = err.message; await new Promise(r => setTimeout(r, 2000)); }
                 }
                 return `통신 장애 났다. 음! (원인: ${lastError})`;
             };
 
-            // 🌟 로그인 버튼: PWA 대응을 위해 signInWithRedirect 사용
+            // 🌟 로그인 버튼: 눌렀을 때 반응이 없으면 1초 뒤 강제 익명인증으로 넘깁니다.
             const handleManualLogin = async () => {
                 if (!window.firebaseAPI) return;
-                const { auth, provider, signInWithRedirect, signInAnonymously } = window.firebaseAPI;
-                try {
-                    await signInWithRedirect(auth, provider);
-                } catch (e) {
-                    console.warn("Redirect Login failed, forcing guest entry...");
-                    await signInAnonymously(auth);
-                }
+                const { auth, provider, signInWithPopup, signInAnonymously } = window.firebaseAPI;
+                
+                // 팝업 시도
+                signInWithPopup(auth, provider).catch(e => {
+                    console.warn("Popup blocked, entering as guest...");
+                    signInAnonymously(auth);
+                });
+
+                // 버튼 클릭 모션 후 1.5초간 반응 없으면 그냥 게스트 입장 강제 실행
+                setTimeout(() => { if(view === 'login') signInAnonymously(auth); }, 1500);
             };
 
             const handleSend = async () => {
@@ -294,7 +278,7 @@
                 setInputText(''); setIsTyping(true);
                 try {
                     await addDoc(collection(db, `${getColPath(user.uid, 'rooms')}/${currentRoomId}/messages`), { sender: 'me', text, time, date, createdAt: serverTimestamp() });
-                    const resp = await fetchAPI(messages.slice(-50).map(m => ({role: m.sender==='me'?'user':'model', parts:[{text: m.text}]})).concat({role:'user', parts:[{text}]}));
+                    const resp = await fetchAPI(messages.slice(-30).map(m => ({role: m.sender==='me'?'user':'model', parts:[{text: m.text}]})).concat({role:'user', parts:[{text}]}));
                     await addDoc(collection(db, `${getColPath(user.uid, 'rooms')}/${currentRoomId}/messages`), { sender: 'deidara', text: resp, time, date, createdAt: serverTimestamp() });
                     await setDoc(fdoc(db, `${getColPath(user.uid, 'rooms')}/${currentRoomId}`), { lastMessage: resp, updatedAt: serverTimestamp() }, { merge: true });
                 } finally { setIsTyping(false); }
@@ -317,8 +301,9 @@
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#BACEE0] relative">
                     <div className="w-24 h-24 rounded-3xl bg-white mb-6 overflow-hidden shadow-lg border border-white/50"><img src="icon-192x192.png" className="w-full h-full object-cover" /></div>
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-2">DeiTalk</h1>
-                    <button onClick={handleManualLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform">구글로 시작하기</button>
-                    <p className="mt-4 text-xs text-gray-500 font-bold opacity-70">로그인 창이 나타나지 않아도 잠시 후 자동 입장됩니다.</p>
+                    <button onClick={handleManualLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-md font-bold active:scale-95 transition-transform mb-3">구글로 시작하기</button>
+                    <button onClick={() => window.firebaseAPI.signInAnonymously(window.firebaseAPI.auth)} className="w-full max-w-xs bg-black/10 py-3 rounded-2xl font-bold text-gray-600 text-sm active:scale-95 transition-transform">게스트로 바로입장</button>
+                    <p className="mt-6 text-[11px] text-gray-500 font-bold opacity-70 text-center">팝업이 차단된 경우 '게스트' 버튼을 누르거나<br/>잠시 기다리면 자동 입장됩니다.</p>
                 </div>
             );
 
@@ -352,7 +337,7 @@
 
                     {view === 'main' ? (
                         <Fragment>
-                            <header className="px-5 py-5 bg-white border-b border-gray-100 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md bg-white/90">
+                            <header className="px-5 py-5 bg-white border-b border-gray-100 flex justify-between items-center sticky top-0 z-20 bg-white/90 backdrop-blur-md">
                                 <h1 className="font-extrabold text-xl tracking-tight text-gray-900">{activeTab==='friends'?"친구":activeTab==='chat'?"채팅":"게시물"}</h1>
                                 <button onClick={() => setShowSettings(true)} className="text-xl">⚙️</button>
                             </header>
@@ -376,8 +361,8 @@
                                 {activeTab === 'chat' && (
                                     <div className="flex-1 px-4 py-4 space-y-4">
                                         {chatRooms.map(room => (
-                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-4 bg-white border border-gray-100 rounded-[36px] cursor-pointer shadow-sm relative">
-                                                <div className="w-[58px] h-[58px] rounded-[22px] bg-white flex items-center justify-center overflow-hidden">{renderProfilePicCommon(profileImgUrl)}</div>
+                                            <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-4 bg-white border border-gray-100 rounded-[36px] cursor-pointer shadow-sm relative transition-all active:scale-95">
+                                                <div className="w-[58px] h-[58px] rounded-[22px] bg-white border border-orange-50 flex items-center justify-center overflow-hidden shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
                                                 <div className="flex-1 min-w-0 pr-12"><h3 className="font-bold text-gray-900">{room.name}</h3><p className="text-[13px] text-gray-500 truncate mt-1">{room.lastMessage || "대화가 없습니다."}</p></div>
                                             </div>
                                         ))}
@@ -387,7 +372,7 @@
                                     <div className="flex-1 bg-gray-50 pb-20 overflow-y-auto">
                                         <div className="bg-white p-6 mb-4">
                                             <textarea value={postInput} onChange={e=>setPostInput(e.target.value)} placeholder="피드 남기기..." className="w-full bg-gray-50 rounded-2xl p-4 text-sm outline-none resize-none font-semibold mb-3" rows="3" />
-                                            <button onClick={() => {}} className="w-full bg-blue-600 text-white font-bold py-3 rounded-2xl">올리기</button>
+                                            <button onClick={() => {}} className="w-full bg-blue-600 text-white font-bold py-3 rounded-2xl active:scale-95 transition-all">올리기</button>
                                         </div>
                                         {posts.map(post=>(
                                             <div key={post.id} className="bg-white p-5 border-b border-gray-100">
@@ -401,16 +386,17 @@
                         </Fragment>
                     ) : (
                         <Fragment>
-                            <header className="px-3 py-3 flex items-center gap-2 border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20">
-                                <button onClick={() => setView('main')} className="p-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-700"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-                                <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-[14px] bg-white overflow-hidden shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
+                            {/* 🌟 채팅 영역: 배경 파란색 고정 및 여백 완전 제거 */}
+                            <header className="px-3 py-3 flex items-center gap-2 border-b border-black/5 bg-[#BACEE0]/95 sticky top-0 z-20 backdrop-blur-md">
+                                <button onClick={() => setView('main')} className="p-2 active:bg-black/5 rounded-full transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-700"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+                                <div onClick={() => setProfileTarget('deidara')} className="w-10 h-10 rounded-[14px] bg-white overflow-hidden shadow-sm active:scale-90 transition-transform cursor-pointer">{renderProfilePicCommon(profileImgUrl)}</div>
                                 <h1 className="font-bold text-gray-800 text-lg ml-1">데이다라</h1>
                             </header>
                             <main className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-6 space-y-6 custom-scrollbar bg-[#BACEE0]">
                                 {messages.map((msg) => (
                                     <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                         <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            {msg.sender !== 'me' && <div className="w-10 h-10 rounded-[14px] bg-white mr-3 shrink-0 overflow-hidden">{renderProfilePicCommon(profileImgUrl)}</div>}
+                                            {msg.sender !== 'me' && <div className="w-10 h-10 rounded-[14px] bg-white mr-3 shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>}
                                             <div className="flex flex-col">
                                                 {msg.sender !== 'me' && <span className="text-[12px] text-gray-600 mb-1 ml-1 font-bold">데이다라</span>}
                                                 <div className={`px-5 py-3.5 rounded-[24px] text-[15px] shadow-sm font-bold ${msg.sender === 'me' ? 'bg-[#FEE500] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm'}`}>{msg.text}</div>
@@ -421,19 +407,19 @@
                                 {isTyping && <div className="ml-13 text-xs text-gray-400 font-bold animate-pulse uppercase">Typing...</div>}
                                 <div ref={chatEndRef} />
                             </main>
-                            <footer className="p-3.5 bg-white border-t border-gray-100 pb-safe flex items-center gap-3">
-                                <button className="w-10 h-10 shrink-0 bg-gray-100 rounded-full flex items-center justify-center text-gray-500"><IconCamera /></button>
-                                <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-100 border-none rounded-full px-5 py-3 text-sm outline-none font-bold" placeholder="메시지 입력..." />
-                                <button onClick={handleSend} className="w-10 h-10 shrink-0 bg-[#FEE500] rounded-full flex items-center justify-center text-gray-800"><IconSend /></button>
+                            <footer className="p-3.5 bg-white border-t border-gray-100 pb-safe flex items-center gap-3 relative z-30 mt-0">
+                                <button className="w-10 h-10 shrink-0 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 active:scale-90 transition-all"><IconCamera /></button>
+                                <input type="text" value={inputText} onChange={e=>setInputText(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-gray-100 border-none rounded-full px-5 py-3 text-sm outline-none font-bold focus:bg-white transition-all" placeholder="메시지 입력..." />
+                                <button onClick={handleSend} className="w-10 h-10 shrink-0 bg-[#FEE500] rounded-full flex items-center justify-center text-gray-800 active:scale-90 transition-all"><IconSend /></button>
                             </footer>
                         </Fragment>
                     )}
 
                     {view === 'main' && (
-                        <nav className="absolute bottom-0 w-full bg-white/95 border-t border-gray-100 flex justify-around items-center h-[82px] pb-safe z-30 backdrop-blur-md">
-                            <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='friends'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-2xl">👤</span><span className="text-[10px] font-black">Home</span></div>
-                            <div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='chat'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-2xl">💬</span><span className="text-[10px] font-black">Chat</span></div>
-                            <div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='feed'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-2xl">📋</span><span className="text-[10px] font-black">Feed</span></div>
+                        <nav className="absolute bottom-0 w-full bg-white/95 border-t border-gray-100 flex justify-around items-center h-[82px] pb-safe z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md">
+                            <div onClick={()=>setActiveTab('friends')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='friends'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-2xl">👤</span><span className="text-[10px] font-black uppercase">Home</span></div>
+                            <div onClick={()=>setActiveTab('chat')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='chat'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-2xl">💬</span><span className="text-[10px] font-black uppercase">Chat</span></div>
+                            <div onClick={()=>setActiveTab('feed')} className={`flex flex-col items-center gap-1 cursor-pointer w-full transition-all ${activeTab==='feed'?'text-gray-900 scale-110':'text-gray-300'}`}><span className="text-2xl">📋</span><span className="text-[10px] font-black uppercase">Feed</span></div>
                         </nav>
                     )}
                 </div>
