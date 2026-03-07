@@ -56,7 +56,6 @@
             measurementId: "G-QYDP8692TD"
         };
 
-        // 🚨 데이터 연동을 위해 환경(미리보기/깃허브) 상관없이 고정된 경로 사용!
         const appId = 'deitalk-app';
         let auth = null, db = null, provider = null;
         let isFirebaseReady = false;
@@ -71,7 +70,7 @@
                     auth = firebase.auth();
                     db = firebase.firestore();
                     provider = new firebase.auth.GoogleAuthProvider();
-                    provider.setCustomParameters({ prompt: 'select_account' }); // 🌟 강제로 구글 계정 선택창 띄우기
+                    provider.setCustomParameters({ prompt: 'select_account' });
                     isFirebaseReady = true;
                     return true;
                 }
@@ -207,10 +206,18 @@
             
             const [showSettings, setShowSettings] = useState(false);
 
-            const chatEndRef = useRef(null);
-            const getPath = (uid, col) => `/artifacts/${appId}/users/${uid}/${col}`;
+            // 🌟 잃어버린 데이터 복구를 위한 경로 설정 스위치!
+            const [pathMode, setPathMode] = useState(localStorage.getItem('deitalk_path_mode') || 'artifacts');
 
-            // 🌟 무한 로딩 해결을 위한 완전한 방어 로직
+            const chatEndRef = useRef(null);
+
+            // 사용자가 선택한 모드에 따라 데이터 경로를 원래대로 되돌려줍니다.
+            const getPath = (uid, col) => {
+                if (pathMode === 'root') return col; // 예: db.collection('rooms')
+                if (pathMode === 'user') return `users/${uid}/${col}`; // 예: db.collection('users/UID/rooms')
+                return `/artifacts/${appId}/users/${uid}/${col}`; // AI가 썼던 잘못된 경로
+            };
+
             useEffect(() => {
                 const ready = initFirebase();
                 if (!ready || !auth) {
@@ -220,19 +227,15 @@
 
                 let isRedirectChecking = true;
 
-                // 혹시 모를 리다이렉트 흔적을 가장 먼저 털어냅니다.
                 auth.getRedirectResult().then((result) => {
                     isRedirectChecking = false;
-                    if (!result.user && !auth.currentUser) {
-                        setView('login'); // 결과가 비었으면 무조건 로그인화면 
-                    }
+                    if (!result.user && !auth.currentUser) setView('login');
                 }).catch(e => {
                     isRedirectChecking = false;
                     console.error("Redirect check error:", e);
                     setView('login');
                 });
 
-                // 인증 상태 감지 (가장 중요)
                 const unsubscribe = auth.onAuthStateChanged((u) => {
                     if (u) {
                         setUser(u); 
@@ -240,14 +243,10 @@
                         loadPosts(u.uid);
                         setView('main');
                     } else {
-                        // 확인 절차가 다 끝났는데 로그인 유저가 없다면 로그인 화면 노출
-                        if (!isRedirectChecking) {
-                            setView('login');
-                        }
+                        if (!isRedirectChecking) setView('login');
                     }
                 });
 
-                // 🚨 최후의 안전장치: 어떤 에러로 인해 멈춰도 3초 뒤엔 무조건 로딩 화면을 탈출함!
                 const safeTimeout = setTimeout(() => {
                     setView(prev => {
                         if (prev === 'loading' && !auth.currentUser) return 'login';
@@ -259,7 +258,7 @@
                     unsubscribe();
                     clearTimeout(safeTimeout);
                 };
-            }, []);
+            }, [pathMode]); // pathMode가 바뀌면 다시 로드
 
             const loadChatRooms = (uid) => {
                 if (!db) return;
@@ -287,7 +286,7 @@
                         });
                     return () => unsubscribe();
                 }
-            }, [view, currentRoomId, user]);
+            }, [view, currentRoomId, user, pathMode]);
 
             const handleImageUploadUI = async (e, mode, target) => {
                 const file = e.target.files[0]; if (!file) return;
@@ -301,7 +300,6 @@
                 }
             };
 
-            // 🌟 팝업 방식으로 복원 & 오류 시 로딩 해제 확실히 보장
             const handleLogin = async () => {
                 if (!isFirebaseReady) { setErrorMessage("Firebase 설정 오류"); return; }
                 try {
@@ -309,15 +307,11 @@
                     await auth.signInWithPopup(provider);
                 } catch (e) {
                     console.error("Login Error:", e);
-                    // 🚨 여기서 즉시 로딩을 풀고 에러 메시지를 띄워 무한반복을 방지합니다.
                     setView('login');
-                    
                     if (e.code === 'auth/popup-blocked') {
-                        setErrorMessage("팝업이 차단되었습니다! 브라우저 주소창(또는 설정)에서 팝업을 '허용'해주세요.");
-                    } else if (e.code === 'auth/popup-closed-by-user') {
-                        // 사용자가 창을 끈 경우 메시지 없이 돌아옴
-                    } else {
-                        setErrorMessage(`구글 로그인 실패: ${e.message}\n미리보기 화면(Iframe)에서 막혔을 수 있으니 새 탭에서 열어보세요.`);
+                        setErrorMessage("팝업이 차단되었습니다! 브라우저 주소창에서 팝업을 '허용'해주세요.");
+                    } else if (e.code !== 'auth/popup-closed-by-user') {
+                        setErrorMessage(`구글 로그인 오류: ${e.message}`);
                     }
                 }
             };
@@ -410,7 +404,7 @@
                     <p className="text-gray-600 mb-10 font-bold opacity-70">예술은 폭발이다, 음!</p>
                     <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-xl font-black mb-4 text-gray-800 active:scale-95 transition-all flex items-center justify-center gap-2"><svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> GOOGLE LOGIN</button>
                     <button onClick={handleGuestLogin} className="w-full max-w-xs bg-black/10 py-4 rounded-2xl font-bold text-gray-700 text-sm active:scale-95 transition-all">GUEST START</button>
-                    <p className="mt-6 text-[11px] text-black/40 font-bold text-center">동일한 구글 계정으로 로그인하면<br/>기존 채팅과 피드 데이터가 모두 복구됩니다.</p>
+                    <p className="mt-6 text-[11px] text-black/40 font-bold text-center">동일한 구글 계정으로 로그인 후<br/>우측 상단 ⚙️설정에서 원본 복구 스위치를 켜주세요!</p>
                 </div>
             );
 
@@ -429,10 +423,29 @@
 
                     {showSettings && (
                         <div className="fixed inset-0 z-[4000] bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm">
-                            <div className="bg-white rounded-[32px] p-8 w-full max-w-sm shadow-2xl">
-                                <h2 className="text-2xl font-black mb-8 text-gray-800">Settings</h2>
-                                <div className="space-y-6 mb-10">
-                                    <div className="bg-gray-50 p-3 rounded-2xl text-[10px] font-bold text-gray-400 break-all">UID: {user?.uid}</div>
+                            <div className="bg-white rounded-[32px] p-8 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+                                <h2 className="text-2xl font-black mb-6 text-gray-800">Settings</h2>
+                                
+                                <div className="bg-gray-50 p-3 rounded-2xl text-[10px] font-bold text-gray-400 break-all mb-4">
+                                    UID: {user?.uid}
+                                </div>
+
+                                {/* 🚨 연지님을 위한 데이터 복구 스위치 (이게 핵심입니다!) 🚨 */}
+                                <div className="bg-red-50 p-4 rounded-[20px] border border-red-200 mb-6">
+                                    <p className="text-[12px] font-black text-red-500 mb-1">🚨 잃어버린 데이터 복구 스위치</p>
+                                    <p className="text-[10px] text-red-400 mb-3 font-bold break-keep">AI가 경로를 바꿔서 기록이 안 보였던 것입니다. 아래 스위치를 바꿔가며 연지님의 원본 데이터를 찾아보세요!</p>
+                                    <select 
+                                        value={pathMode} 
+                                        onChange={e => { setPathMode(e.target.value); localStorage.setItem('deitalk_path_mode', e.target.value); }} 
+                                        className="w-full bg-white border border-red-200 rounded-xl px-3 py-2 text-sm font-bold outline-none text-red-500 shadow-sm cursor-pointer"
+                                    >
+                                        <option value="artifacts">기본 모드 (현재 비어있음)</option>
+                                        <option value="root">복구 모드 1 (일반적인 방식 - 추천!)</option>
+                                        <option value="user">복구 모드 2 (유저별 분리 방식)</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-5 mb-8">
                                     <div><p className="text-[10px] font-black text-gray-400 mb-2 uppercase ml-1">AI Model</p>
                                         <select value={apiModel} onChange={e=>{ setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value); }} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-bold outline-none">
                                             <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash</option>
@@ -479,7 +492,7 @@
                                 {activeTab === 'chat' && (
                                     <div className="flex-1 px-4 py-2 space-y-4">
                                         <button onClick={() => { const n = prompt("채팅방 이름?"); if(n && db) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="w-full py-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 font-bold text-sm active:scale-95 transition-all">＋ 새 채팅방 만들기</button>
-                                        {chatRooms.length === 0 && <div className="text-center py-20 text-gray-300 font-bold">오른쪽 위 버튼으로 채팅을 시작해, 음!</div>}
+                                        {chatRooms.length === 0 && <div className="text-center py-20 text-gray-300 font-bold">대화가 안 보이면 ⚙️설정에서 복구 스위치를 눌러보세요!</div>}
                                         {chatRooms.map(room => (
                                             <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-[32px] cursor-pointer shadow-sm active:scale-95 transition-all">
                                                 <div className="w-[54px] h-[54px] rounded-[20px] bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
@@ -505,7 +518,7 @@
                                             </div>
                                         </div>
 
-                                        {posts.length === 0 && <div className="text-center py-10 text-gray-400 font-bold text-sm">아직 작성된 피드가 없어, 음!</div>}
+                                        {posts.length === 0 && <div className="text-center py-10 text-gray-400 font-bold text-sm">피드가 안 보이면 ⚙️설정에서 복구 스위치를 눌러보세요!</div>}
                                         
                                         {posts.map(post => (
                                             <div key={post.id} className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-100">
@@ -595,6 +608,5 @@
     </script>
 </body>
 </html>
-
 
 
