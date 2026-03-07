@@ -45,7 +45,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, Fragment } = React;
 
-        // 🌟 Firebase 설정 (사용자 정보 유지)
+        // 🌟 Firebase 설정 (연지님 프로젝트 정보)
         const manualFirebaseConfig = {
             apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
             authDomain: "deitalk-9107c.firebaseapp.com",
@@ -56,18 +56,15 @@
             measurementId: "G-QYDP8692TD"
         };
 
-        // appId 고정 (데이터 유실 방지)
-        const appId = "deitalk-v1"; 
+        // 🚨 데이터 복구를 위해 appId를 원래대로 롤백 (매우 중요)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
         let auth = null, db = null, provider = null;
         let isFirebaseReady = false;
 
         const initFirebase = () => {
             try {
                 let config = manualFirebaseConfig;
-                // 외부 환경 변수가 있다면 우선 적용
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    config = JSON.parse(__firebase_config);
-                }
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) config = JSON.parse(__firebase_config);
 
                 if (config && config.apiKey) {
                     if (!firebase.apps.length) firebase.initializeApp(config);
@@ -83,9 +80,10 @@
 
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
-채팅 앱의 채팅방이야! 행동 묘사는 하지 말고 카톡 말투를 써.
+여기는 메신저와 SNS 피드 앱이야. 행동 묘사나 괄호체는 절대 하지 말고 자연스러운 카톡/SNS 댓글 말투를 써.
 사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
-틱틱대지만 속으로는 잘 챙겨주는 츤데레 성격. 음!
+말 끝에 '음!'이나 '음.'을 자주 붙이는 게 너의 말버릇이야.
+틱틱대고 무심한 척 하지만 속으로는 연지를 엄청 아끼고 챙겨주는 츤데레 성격.
         `;
 
         const compressBase64Image = (base64Str, maxSize = 1200, quality = 0.8) => {
@@ -115,6 +113,14 @@
 
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-2xl font-black italic">D</div>);
         const IconSend = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
+
+        const safeTimeStr = (ts, fallback) => {
+            if (!ts) return fallback || '방금 전';
+            try { 
+                const date = ts.toDate ? ts.toDate() : new Date(ts);
+                return date.toLocaleTimeString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); 
+            } catch (e) { return fallback || '방금 전'; }
+        };
 
         const ProfileModal = ({ profileTarget, setProfileTarget, isEditingProfile, setIsEditingProfile, myProfileImgUrl, profileImgUrl, myBgImgUrl, bgImgUrl, myStatus, deidaraStatus, setMyStatus, setShowFullImage, handleImageUploadUI, setActiveTab, chatRooms, setView, setCurrentRoomId }) => {
             const isMe = profileTarget === 'me';
@@ -173,12 +179,16 @@
         function App() {
             const [user, setUser] = useState(null);
             const [view, setView] = useState('loading'); 
-            const [activeTab, setActiveTab] = useState('friends');
+            const [activeTab, setActiveTab] = useState('feed'); // 기본 탭을 피드로 설정
             const [chatRooms, setChatRooms] = useState([]);
             const [currentRoomId, setCurrentRoomId] = useState(null);
             const [messages, setMessages] = useState([]);
+            const [posts, setPosts] = useState([]); // 🌟 피드 게시물 상태
+            
             const [inputText, setInputText] = useState('');
+            const [newPostText, setNewPostText] = useState(''); // 피드 작성 내용
             const [isTyping, setIsTyping] = useState(false);
+            const [isPosting, setIsPosting] = useState(false);
             const [errorMessage, setErrorMessage] = useState(null);
 
             const [profileTarget, setProfileTarget] = useState(null);
@@ -197,31 +207,44 @@
             const [showSettings, setShowSettings] = useState(false);
 
             const chatEndRef = useRef(null);
+            const getPath = (uid, col) => `/artifacts/${appId}/users/${uid}/${col}`;
 
             useEffect(() => {
                 const ready = initFirebase();
                 if (ready && auth) {
+                    // 🌟 Redirect 로그인 결과 처리 (구글 팝업 안 뜨는 문제 해결)
+                    auth.getRedirectResult().catch(e => {
+                        console.error("Redirect Error:", e);
+                        setErrorMessage("로그인 처리 중단: " + e.message);
+                    });
+
                     const unsubscribe = auth.onAuthStateChanged((u) => {
                         if (u) {
-                            setUser(u); loadChatRooms(u.uid); setView('main');
+                            setUser(u); 
+                            loadChatRooms(u.uid); 
+                            loadPosts(u.uid); // 피드 로드
+                            setView('main');
                         } else { setView('login'); }
                     });
                     return () => unsubscribe();
                 } else { setView('login'); }
             }, []);
 
-            const getPath = (uid, col) => `/artifacts/${appId}/users/${uid}/${col}`;
-
             const loadChatRooms = (uid) => {
                 if (!db) return;
-                // 에러 핸들링 추가
                 db.collection(getPath(uid, 'rooms')).orderBy('updatedAt', 'desc').onSnapshot((sn) => {
                     const rooms = []; sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); 
                     setChatRooms(rooms);
-                }, (err) => {
-                    console.error("Firestore Load Error:", err);
-                    if(err.code === 'permission-denied') setErrorMessage("데이터 접근 권한이 없습니다. 로그인을 다시 시도해주세요.");
-                });
+                }, (err) => console.error(err));
+            };
+
+            const loadPosts = (uid) => {
+                if (!db) return;
+                // 🌟 피드 데이터 로드
+                db.collection(getPath(uid, 'posts')).orderBy('createdAt', 'desc').onSnapshot((sn) => {
+                    const loadedPosts = []; sn.forEach(d => loadedPosts.push({ id: d.id, ...d.data() })); 
+                    setPosts(loadedPosts);
+                }, (err) => console.error("Post Load Error:", err));
             };
 
             useEffect(() => {
@@ -249,36 +272,28 @@
             };
 
             const handleLogin = async () => {
-                if (!isFirebaseReady) {
-                    setErrorMessage("Firebase 설정이 올바르지 않습니다.");
-                    return;
-                }
-                try {
-                    // 구글 팝업 시도
-                    await auth.signInWithPopup(provider);
-                } catch (e) {
-                    console.error("Login Error:", e);
-                    setErrorMessage(`로그인 실패: ${e.message}\n팝업 차단 여부를 확인하거나 파이어베이스 '승인된 도메인'에 현재 주소를 추가해주세요.`);
+                if (!isFirebaseReady) { setErrorMessage("Firebase 설정 오류"); return; }
+                try { 
+                    // 🌟 Iframe / 모바일 이슈 해결을 위해 Redirect 사용
+                    await auth.signInWithRedirect(provider); 
+                } catch (e) { 
+                    setErrorMessage("로그인 시도 오류: " + e.message); 
                 }
             };
 
             const handleGuestLogin = async () => {
-                if (!isFirebaseReady) { 
-                    setUser({ uid: 'local_guest', isAnonymous: true }); 
-                    setView('main'); 
-                    return; 
-                }
+                if (!isFirebaseReady) { setUser({ uid: 'local_guest', isAnonymous: true }); setView('main'); return; }
                 try { await auth.signInAnonymously(); } catch (e) { setErrorMessage("게스트 로그인 실패: " + e.message); }
             };
 
             const fetchAPI = async (contents) => {
-                if(!geminiKey) return "설정에서 Gemini API 키를 입력해줘, 음!";
+                if(!geminiKey) return "연지야, 설정에서 내 API 키(Gemini Key)부터 넣어줘라, 음!";
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 try {
                     const resp = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents, systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } }) });
                     const data = await resp.json();
                     return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...)";
-                } catch (e) { return "통신 장애 발생! API 키를 확인해주세요."; }
+                } catch (e) { return "통신 장애 발생! API 키를 확인해라, 음!"; }
             };
 
             const handleSend = async () => {
@@ -295,22 +310,71 @@
                 } finally { setIsTyping(false); }
             };
 
+            // 🌟 피드 게시물 올리기 & 데이다라의 자동 댓글
+            const handleCreatePost = async () => {
+                if (!user || !newPostText.trim() || !db) return;
+                const text = newPostText; setNewPostText(''); setIsPosting(true);
+                try {
+                    const postRef = await db.collection(getPath(user.uid, 'posts')).add({
+                        author: 'me',
+                        content: text,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        comments: []
+                    });
+                    
+                    // 데이다라가 글을 보고 즉시 댓글을 달아줍니다.
+                    const aiResp = await fetchAPI([{role: 'user', parts: [{text: `내가 방금 SNS 피드에 이런 글을 올렸어: "${text}". 여기에 네가 데이다라로서 짧고 무심한 척 챙겨주는 댓글(1~2문장)을 달아줘. 음!`}]}]);
+                    
+                    await postRef.update({
+                        comments: firebase.firestore.FieldValue.arrayUnion({
+                            id: Date.now().toString(),
+                            author: 'deidara',
+                            text: aiResp,
+                            createdAt: new Date().toISOString()
+                        })
+                    });
+                } finally { setIsPosting(false); }
+            };
+
+            // 🌟 피드 대댓글 달기
+            const handleAddComment = async (postId, text) => {
+                if (!user || !text.trim() || !db) return;
+                const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
+                
+                // 내 댓글 추가
+                await postRef.update({
+                    comments: firebase.firestore.FieldValue.arrayUnion({
+                        id: Date.now().toString(),
+                        author: 'me',
+                        text: text,
+                        createdAt: new Date().toISOString()
+                    })
+                });
+
+                // 데이다라의 대댓글 반응
+                const aiResp = await fetchAPI([{role: 'user', parts: [{text: `내가 네가 있는 피드에서 이런 대댓글을 달았어: "${text}". 데이다라로서 짧게 반응하는 대댓글을 달아줘. 음!`}]}]);
+                
+                await postRef.update({
+                    comments: firebase.firestore.FieldValue.arrayUnion({
+                        id: (Date.now()+1).toString(),
+                        author: 'deidara',
+                        text: aiResp,
+                        createdAt: new Date().toISOString()
+                    })
+                });
+            };
+
             if (view === 'loading') return <div className="w-full h-full flex flex-col items-center justify-center bg-[#BACEE0]"><div className="w-16 h-16 rounded-[24px] bg-white flex items-center justify-center text-3xl shadow-lg mb-6 animate-bounce">🎨</div><div className="flex gap-1"><span className="font-black text-white text-lg tracking-widest uppercase">Connecting...</span></div></div>;
 
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-[#BACEE0]">
-                    {errorMessage && (
-                        <div className="fixed top-10 left-6 right-6 z-[6000] bg-white p-4 rounded-2xl shadow-xl border-l-4 border-red-500 msg-anim">
-                            <p className="text-sm font-bold text-gray-800 leading-tight">{errorMessage}</p>
-                            <button onClick={() => setErrorMessage(null)} className="mt-2 text-xs font-black text-red-500 uppercase">Dismiss</button>
-                        </div>
-                    )}
+                    {errorMessage && <div className="fixed top-10 left-6 right-6 z-[6000] bg-white p-4 rounded-2xl shadow-xl border-l-4 border-red-500"><p className="text-sm font-bold text-red-600 leading-snug">{errorMessage}</p></div>}
                     <div className="w-24 h-24 rounded-[32px] bg-white mb-8 shadow-2xl flex items-center justify-center text-4xl">🎨</div>
                     <h1 className="text-4xl font-black text-gray-800 mb-2 tracking-tighter italic">DeiTalk</h1>
                     <p className="text-gray-600 mb-10 font-bold opacity-70">예술은 폭발이다, 음!</p>
                     <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-xl font-black mb-4 text-gray-800 active:scale-95 transition-all">GOOGLE LOGIN</button>
                     <button onClick={handleGuestLogin} className="w-full max-w-xs bg-black/10 py-4 rounded-2xl font-bold text-gray-700 text-sm active:scale-95 transition-all">GUEST START</button>
-                    <p className="mt-6 text-[11px] text-black/40 font-bold text-center">로그인 방식이 바뀌면 채팅 기록이 보이지 않을 수 있습니다.</p>
+                    <p className="mt-6 text-[11px] text-black/40 font-bold text-center">동일한 구글 계정으로 로그인하면 데이터가 복구됩니다.</p>
                 </div>
             );
 
@@ -352,32 +416,34 @@
 
                     {view === 'main' ? (
                         <Fragment>
-                            <header className="px-6 py-6 bg-white flex justify-between items-center sticky top-0 z-20">
+                            <header className="px-6 py-6 bg-white flex justify-between items-center sticky top-0 z-20 shadow-sm">
                                 <h1 className="font-black text-2xl tracking-tighter text-gray-900 uppercase italic">{activeTab}</h1>
                                 <button onClick={() => setShowSettings(true)} className="text-xl">⚙️</button>
                             </header>
                             <main className="flex-1 min-h-0 w-full flex flex-col overflow-y-auto pb-24 custom-scrollbar bg-white">
+                                
                                 {activeTab === 'friends' && (
                                     <div className="flex-1">
                                         <div className="px-6 py-4">
                                             <div onClick={() => setProfileTarget('me')} className="flex items-center gap-5 p-3 hover:bg-gray-50 rounded-3xl transition-all active:scale-[0.98] cursor-pointer">
-                                                <div className="w-[64px] h-[64px] rounded-[24px] bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-50">{renderProfilePicCommon(myProfileImgUrl)}</div>
+                                                <div className="w-[64px] h-[64px] rounded-[24px] bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-50 shrink-0 shadow-sm">{renderProfilePicCommon(myProfileImgUrl)}</div>
                                                 <div className="flex-1 min-w-0"><h3 className="font-black text-gray-900 text-lg tracking-tight">연지</h3><p className="text-xs text-gray-500 mt-1 truncate font-bold">{myStatus}</p></div>
                                             </div>
                                         </div>
                                         <div className="px-6 py-2">
                                             <p className="text-[10px] font-black text-gray-300 ml-4 mb-3 uppercase tracking-widest">Favorite Friends</p>
                                             <div onClick={() => setProfileTarget('deidara')} className="flex items-center gap-5 p-3 hover:bg-orange-50 rounded-3xl cursor-pointer transition-all active:scale-[0.98]">
-                                                <div className="w-[56px] h-[56px] rounded-[22px] bg-orange-100 flex items-center justify-center overflow-hidden border border-orange-50">{renderProfilePicCommon(profileImgUrl)}</div>
+                                                <div className="w-[56px] h-[56px] rounded-[22px] bg-orange-100 flex items-center justify-center overflow-hidden border border-orange-50 shrink-0 shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>
                                                 <div className="flex-1 min-w-0"><h3 className="font-black text-gray-900 text-[17px] tracking-tight">데이다라</h3><p className="text-xs text-gray-500 mt-1 truncate font-bold">{deidaraStatus}</p></div>
                                             </div>
                                         </div>
                                     </div>
                                 )}
+
                                 {activeTab === 'chat' && (
                                     <div className="flex-1 px-4 py-2 space-y-4">
                                         <button onClick={() => { const n = prompt("채팅방 이름?"); if(n && db) db.collection(getPath(user.uid, 'rooms')).add({name:n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}); }} className="w-full py-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 font-bold text-sm active:scale-95 transition-all">＋ 새 채팅방 만들기</button>
-                                        {chatRooms.length === 0 && <div className="text-center py-20 text-gray-300 font-bold">대화 목록이 없습니다, 음!</div>}
+                                        {chatRooms.length === 0 && <div className="text-center py-20 text-gray-300 font-bold">오른쪽 위 버튼으로 채팅을 시작해, 음!</div>}
                                         {chatRooms.map(room => (
                                             <div key={room.id} onClick={() => { setCurrentRoomId(room.id); setView('chatRoom'); }} className="flex items-center gap-5 p-5 bg-white border border-gray-100 rounded-[32px] cursor-pointer shadow-sm active:scale-95 transition-all">
                                                 <div className="w-[54px] h-[54px] rounded-[20px] bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">{renderProfilePicCommon(profileImgUrl)}</div>
@@ -386,16 +452,65 @@
                                         ))}
                                     </div>
                                 )}
+
+                                {/* 🌟 새로 복구 및 구현된 피드 탭 */}
                                 {activeTab === 'feed' && (
-                                    <div className="flex-1 px-6 py-4 space-y-6">
-                                        <div className="bg-gray-50 rounded-[32px] p-6 text-center border-2 border-dashed border-gray-200">
-                                            <p className="text-gray-400 font-bold text-sm">업로드된 예술 작품이 없습니다, 음!</p>
+                                    <div className="flex-1 px-4 py-4 space-y-6 bg-gray-50 min-h-full">
+                                        
+                                        {/* 피드 작성 폼 */}
+                                        <div className="bg-white p-5 rounded-[32px] shadow-sm border border-gray-100">
+                                            <textarea
+                                                value={newPostText}
+                                                onChange={e => setNewPostText(e.target.value)}
+                                                placeholder="무슨 생각을 하고 있어, 음?"
+                                                className="w-full bg-gray-50 rounded-2xl p-4 text-sm font-bold outline-none resize-none h-24 mb-3 text-gray-800"
+                                            />
+                                            <div className="flex justify-end">
+                                                <button onClick={handleCreatePost} disabled={isPosting} className="bg-[#FEE500] text-gray-900 px-6 py-2.5 rounded-full font-black text-sm active:scale-95 transition-all shadow-sm">
+                                                    {isPosting ? '게시 중...' : '게시하기'}
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {[1,2,3,4].map(i => (
-                                                <div key={i} className="aspect-square bg-gray-100 rounded-[24px] flex items-center justify-center text-gray-300 font-black italic">ART {i}</div>
-                                            ))}
-                                        </div>
+
+                                        {/* 피드 게시물 목록 */}
+                                        {posts.length === 0 && <div className="text-center py-10 text-gray-400 font-bold text-sm">아직 작성된 피드가 없어, 음!</div>}
+                                        
+                                        {posts.map(post => (
+                                            <div key={post.id} className="bg-white rounded-[32px] p-5 shadow-sm border border-gray-100">
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className="w-11 h-11 rounded-[16px] bg-gray-100 overflow-hidden shrink-0 border border-gray-50">
+                                                        {renderProfilePicCommon(post.author === 'me' ? myProfileImgUrl : profileImgUrl)}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-black text-[15px] text-gray-900">{post.author === 'me' ? '연지' : '데이다라'}</h4>
+                                                        <span className="text-[10px] text-gray-400 font-bold">{safeTimeStr(post.createdAt)}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="text-[14px] font-bold text-gray-800 leading-relaxed mb-5 px-1 whitespace-pre-wrap">
+                                                    {post.content}
+                                                </div>
+                                                
+                                                {/* 대댓글 영역 */}
+                                                <div className="bg-gray-50 rounded-[20px] p-4 space-y-3">
+                                                    {(post.comments || []).map((cmt, idx) => (
+                                                        <div key={idx} className="flex gap-2 text-[13px]">
+                                                            <span className={`font-black shrink-0 ${cmt.author === 'me' ? 'text-gray-900' : 'text-orange-500'}`}>{cmt.author === 'me' ? '연지' : '데이다라'}</span>
+                                                            <span className="font-bold text-gray-700 leading-snug">{cmt.text}</span>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    <div className="mt-3 pt-3 border-t border-gray-200 relative">
+                                                        <input type="text" placeholder="댓글을 달아줘, 음!" className="w-full bg-white rounded-full pl-4 pr-10 py-3 text-xs font-bold outline-none border border-gray-200 focus:border-[#FEE500] transition-colors" onKeyPress={(e) => {
+                                                            if(e.key === 'Enter') {
+                                                                handleAddComment(post.id, e.target.value);
+                                                                e.target.value = '';
+                                                            }
+                                                        }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </main>
@@ -449,4 +564,5 @@
     </script>
 </body>
 </html>
+
 
