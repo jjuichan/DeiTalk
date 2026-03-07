@@ -197,6 +197,7 @@
             const [errorMessage, setErrorMessage] = useState(null);
 
             const [activeMsgId, setActiveMsgId] = useState(null);
+            const [activeCommentId, setActiveCommentId] = useState(null); // 🌟 피드 댓글 액션 메뉴용 상태
 
             const [profileTarget, setProfileTarget] = useState(null);
             const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -433,6 +434,62 @@
                 } catch (e) {
                     alert('재생성 실패!');
                 } finally { setIsTyping(false); }
+            };
+
+            // 🌟 피드 댓글 관리 기능 (삭제, 수정, 재생성)
+            const deleteFeedComment = async (postId, idx) => {
+                if(!confirm('이 댓글을 삭제할까, 음?')) return;
+                const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
+                const postSnap = await postRef.get();
+                if(!postSnap.exists) return;
+                const postData = postSnap.data();
+                const newComments = [...postData.comments];
+                newComments.splice(idx, 1);
+                await postRef.update({ comments: newComments });
+                setActiveCommentId(null);
+            };
+
+            const editFeedComment = async (postId, idx, currentText) => {
+                const newText = prompt('댓글 수정:', currentText);
+                if(newText !== null && newText.trim() !== '') {
+                    const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
+                    const postSnap = await postRef.get();
+                    if(!postSnap.exists) return;
+                    const postData = postSnap.data();
+                    const newComments = [...postData.comments];
+                    newComments[idx] = { ...newComments[idx], text: newText, content: newText };
+                    await postRef.update({ comments: newComments });
+                    setActiveCommentId(null);
+                }
+            };
+
+            const regenFeedComment = async (postId, idx) => {
+                setActiveCommentId(null);
+                setIsPosting(true);
+                try {
+                    const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
+                    const postSnap = await postRef.get();
+                    if(!postSnap.exists) return;
+                    const postData = postSnap.data();
+                    
+                    // 데이다라가 문맥을 알 수 있도록 원문과 이전 댓글들을 합쳐서 전달
+                    const priorComments = postData.comments.slice(0, idx);
+                    let promptText = `피드 원문: "${postData.content}"\n`;
+                    if(priorComments.length > 0) {
+                        promptText += `이전 댓글들:\n${priorComments.map(c => `${c.author === 'me' ? '연지' : '데이다라'}: ${c.text || c.content || c.message || (typeof c === 'string' ? c : '')}`).join('\n')}\n`;
+                    }
+                    promptText += `\n이 상황에서 데이다라로서 짧고 츤데레 같은 댓글(1~2문장)을 다시 달아줘. 끝에 '음!'을 꼭 붙여줘.`;
+
+                    const aiResp = await fetchAPI([{role: 'user', parts: [{text: promptText}]}]);
+                    
+                    const newComments = [...postData.comments];
+                    newComments[idx] = { ...newComments[idx], text: aiResp, content: aiResp };
+                    await postRef.update({ comments: newComments });
+                } catch(e) {
+                    alert('재생성 실패!');
+                } finally {
+                    setIsPosting(false);
+                }
             };
 
             const handleImageUploadUI = async (e, mode, target) => {
@@ -715,17 +772,54 @@
                                                     {post.content}
                                                 </div>
                                                 
-                                                <div className="bg-gray-50 rounded-[20px] p-4 space-y-3">
-                                                    {(post.comments || []).map((cmt, idx) => (
-                                                        <div key={idx} className="flex gap-2 text-[13px] mb-1">
-                                                            <span className={`font-black shrink-0 ${cmt.author === 'me' ? 'text-gray-900' : 'text-orange-500'}`}>{cmt.author === 'me' ? '연지' : '데이다라'}</span>
-                                                            {/* 🌟 기존 데이터(content)와 새 데이터(text)를 모두 읽어오도록 수정 */}
-                                                            <span className="font-bold text-gray-700 leading-snug flex-1 break-words">{cmt.text || cmt.content || cmt.message || (typeof cmt === 'string' ? cmt : '')}</span>
-                                                        </div>
-                                                    ))}
+                                                {/* 🌟 개선된 피드 댓글 UI 영역 */}
+                                                <div className="bg-gray-50 rounded-[24px] p-4 space-y-4 border border-gray-100">
+                                                    {(post.comments || []).map((cmt, idx) => {
+                                                        const cmtText = cmt.text || cmt.content || cmt.message || (typeof cmt === 'string' ? cmt : '');
+                                                        const isMe = cmt.author === 'me';
+                                                        const avatar = isMe ? myProfileImgUrl : profileImgUrl;
+                                                        const activeKey = `${post.id}_${idx}`;
+
+                                                        return (
+                                                            <div key={idx} className="flex gap-3">
+                                                                {/* 댓글 프사 */}
+                                                                <div className="w-8 h-8 rounded-[12px] bg-white overflow-hidden shrink-0 border border-gray-200 shadow-sm flex items-center justify-center">
+                                                                    {renderProfilePicCommon(avatar)}
+                                                                </div>
+                                                                
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-baseline gap-2 mb-0.5">
+                                                                        <span className={`font-black text-[13px] ${isMe ? 'text-gray-900' : 'text-orange-500'}`}>{isMe ? '연지' : '데이다라'}</span>
+                                                                        {cmt.createdAt && <span className="text-[10px] text-gray-400 font-bold">{safeTimeStr(cmt.createdAt)}</span>}
+                                                                    </div>
+                                                                    
+                                                                    {/* 댓글 말풍선 (터치 시 메뉴 등장) */}
+                                                                    <div 
+                                                                        onClick={() => setActiveCommentId(activeCommentId === activeKey ? null : activeKey)}
+                                                                        className={`inline-block px-3.5 py-2.5 rounded-[18px] text-[13px] font-bold text-gray-800 leading-snug break-words cursor-pointer transition-transform active:scale-[0.98] shadow-sm ${isMe ? 'bg-white border border-gray-200 rounded-tl-sm' : 'bg-orange-100/50 border border-orange-100 rounded-tl-sm'}`}
+                                                                    >
+                                                                        {cmtText}
+                                                                    </div>
+                                                                    
+                                                                    {/* 댓글 수정/삭제/재생성 액션 메뉴 */}
+                                                                    {activeCommentId === activeKey && (
+                                                                        <div className="flex gap-3 text-[11px] font-black text-gray-400 mt-1.5 ml-1">
+                                                                            {isMe && <button onClick={()=>editFeedComment(post.id, idx, cmtText)} className="hover:text-gray-700 transition-colors px-1 py-0.5">수정</button>}
+                                                                            <button onClick={()=>deleteFeedComment(post.id, idx)} className="hover:text-red-500 transition-colors px-1 py-0.5">삭제</button>
+                                                                            {!isMe && <button onClick={()=>regenFeedComment(post.id, idx)} className="hover:text-gray-700 transition-colors px-1 py-0.5">재생성</button>}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                     
-                                                    <div className="mt-3 pt-3 border-t border-gray-200 relative">
-                                                        <input type="text" placeholder="댓글을 달아줘, 음!" className="w-full bg-white rounded-full pl-4 pr-10 py-3 text-xs font-bold outline-none border border-gray-200 focus:border-[#FEE500] transition-colors" onKeyPress={(e) => {
+                                                    {/* 댓글 입력창 UI 개선 (옆에 내 프사 띄우기) */}
+                                                    <div className="mt-4 pt-4 border-t border-gray-200 relative flex gap-2 items-center">
+                                                        <div className="w-7 h-7 rounded-[10px] bg-white overflow-hidden shrink-0 border border-gray-200 shadow-sm flex items-center justify-center">
+                                                            {renderProfilePicCommon(myProfileImgUrl)}
+                                                        </div>
+                                                        <input type="text" placeholder="댓글을 달아줘, 음!" className="flex-1 bg-white rounded-full pl-4 pr-4 py-2.5 text-xs font-bold outline-none border border-gray-200 focus:border-[#FEE500] transition-colors shadow-sm" onKeyPress={(e) => {
                                                             if(e.key === 'Enter') {
                                                                 handleAddComment(post.id, e.target.value);
                                                                 e.target.value = '';
