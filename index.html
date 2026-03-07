@@ -41,7 +41,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, Fragment } = React;
 
-        // 🌟 Firebase 초기화 로직
         const manualFirebaseConfig = {
             apiKey: "AIzaSyAPKkpbvu1TQG8SChRCXfFT7G2TZKrWUNc",
             authDomain: "deitalk-9107c.firebaseapp.com",
@@ -82,7 +81,6 @@
 틱틱대고 무심한 척 하지만 속으로는 연지를 엄청 아끼고 챙겨주는 츤데레 성격.
         `;
 
-        // 🌟 이미지 압축 (Firestore 1MB 용량 제한을 위해 1024px로 안전하게 압축)
         const compressBase64Image = (base64Str, maxSize = 1024, quality = 0.8) => {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -114,6 +112,15 @@
                 const date = ts.toDate ? ts.toDate() : new Date(ts);
                 return date.toLocaleTimeString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); 
             } catch (e) { return fallback || '방금 전'; }
+        };
+
+        // 🌟 날짜 표시선 출력을 위한 날짜 추출기
+        const safeDateStr = (ts) => {
+            if (!ts) return '';
+            try { 
+                const date = ts.toDate ? ts.toDate() : new Date(ts);
+                return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }); 
+            } catch (e) { return ''; }
         };
 
         const renderProfilePicCommon = (url) => (url ? <img src={url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-2xl font-black italic">D</div>);
@@ -195,7 +202,6 @@
             const [showFullImage, setShowFullImage] = useState(null);
 
             const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-            // 🌟 초기값으로 gemini-2.5-pro 설정
             const [apiModel, setApiModel] = useState(localStorage.getItem('gemini_api_model') || 'gemini-2.5-pro'); 
             const [profileImgUrl, setProfileImgUrl] = useState(localStorage.getItem('deidara_profile_url') || '');
             const [bgImgUrl, setBgImgUrl] = useState(localStorage.getItem('deidara_bg_url') || '');
@@ -287,7 +293,6 @@
                 try { await auth.signInAnonymously(); } catch (e) { setErrorMessage("게스트 로그인 실패"); }
             };
 
-            // 🌟 텍스트 전용 일반 API 호출
             const fetchAPI = async (chatHistory) => {
                 if(!geminiKey) return "연지야, 설정에서 내 API 키(Gemini Key)부터 넣어줘라, 음!";
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
@@ -298,7 +303,6 @@
                 } catch (e) { return "통신 장애 발생! API 키를 확인해라, 음!"; }
             };
 
-            // 🌟 나노바나나 AI (이미지 생성 전용 API)
             const fetchImageAPI = async (promptText) => {
                 if(!geminiKey) return { text: "연지야, 설정에서 API 키를 먼저 넣어줘라, 음!", base64: null };
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${geminiKey}`;
@@ -532,7 +536,6 @@
                                 </div>
                                 <div className="space-y-5 mb-8">
                                     <div><p className="text-[10px] font-black text-gray-400 mb-2 uppercase ml-1">AI Model</p>
-                                        {/* 🌟 gemini-2.5-pro 모델 옵션 다시 추가 완료 */}
                                         <select value={apiModel} onChange={e=>{ setApiModel(e.target.value); localStorage.setItem('gemini_api_model', e.target.value); }} className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-bold outline-none">
                                             <option value="gemini-2.5-pro">Gemini 2.5 Pro (추천)</option>
                                             <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash</option>
@@ -655,36 +658,69 @@
                                 </div>
                             </header>
                             
-                            <main className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-4 space-y-3 custom-scrollbar bg-[#BACEE0]">
-                                {messages.map((msg) => (
-                                    <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'} msg-anim`}>
-                                        <div className={`flex max-w-[85%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                            {msg.sender !== 'me' && <div className="w-10 h-10 rounded-[14px] bg-white mr-3 shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>}
-                                            <div className="flex flex-col relative">
-                                                {msg.sender !== 'me' && <span className="text-[12px] text-gray-600 mb-1 ml-1 font-bold uppercase">데이다라</span>}
-                                                
-                                                <div 
-                                                    onClick={() => setActiveMsgId(activeMsgId === msg.id ? null : msg.id)}
-                                                    className={`px-5 py-3.5 rounded-[24px] text-[15px] shadow-sm font-bold tracking-tight cursor-pointer transition-transform active:scale-[0.98] flex flex-col ${msg.sender === 'me' ? 'bg-[#FEE500] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm'}`}
-                                                >
-                                                    {msg.imageUrl && (
-                                                        <img src={msg.imageUrl} alt="첨부 이미지" className="max-w-full max-h-[220px] rounded-[16px] mb-2 object-cover" onClick={(e) => { e.stopPropagation(); setShowFullImage(msg.imageUrl); }} />
-                                                    )}
-                                                    {msg.text}
-                                                </div>
+                            <main className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-4 custom-scrollbar bg-[#BACEE0]">
+                                {/* 🌟 날짜 표시선을 렌더링하기 위한 로직 추가 */}
+                                {(() => {
+                                    let lastDateStr = '';
+                                    return messages.map((msg) => {
+                                        const currentDateStr = msg.createdAt ? safeDateStr(msg.createdAt) : safeDateStr(new Date());
+                                        const showDateDivider = currentDateStr !== lastDateStr;
+                                        if (showDateDivider) lastDateStr = currentDateStr;
 
-                                                {activeMsgId === msg.id && (
-                                                    <div className={`flex gap-3 text-[12px] font-black text-black/40 mt-1.5 ${msg.sender === 'me' ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
-                                                        {msg.sender === 'me' && <button onClick={()=>editMsg(msg)} className="hover:text-black transition-colors px-1 py-0.5">수정</button>}
-                                                        <button onClick={()=>deleteMsg(msg.id)} className="hover:text-red-500 transition-colors px-1 py-0.5">삭제</button>
-                                                        {msg.sender === 'deidara' && <button onClick={()=>regenMsg(msg)} className="hover:text-black transition-colors px-1 py-0.5">재생성</button>}
+                                        return (
+                                            <Fragment key={msg.id}>
+                                                {/* 🌟 날짜 표시선 */}
+                                                {showDateDivider && (
+                                                    <div className="flex justify-center my-6">
+                                                        <span className="bg-black/10 text-gray-700 px-4 py-1.5 rounded-full text-[11px] font-bold shadow-sm backdrop-blur-sm tracking-tight">
+                                                            {currentDateStr}
+                                                        </span>
                                                     </div>
                                                 )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {isTyping && <div className="ml-13 text-[11px] text-white/70 font-black animate-pulse uppercase tracking-widest mt-2">Typing...</div>}
+                                                
+                                                <div className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'} msg-anim mb-3`}>
+                                                    <div className={`flex max-w-[100%] ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                        {/* 프로필 이미지 (데이다라) */}
+                                                        {msg.sender !== 'me' && <div className="w-10 h-10 rounded-[14px] bg-white mr-2 shrink-0 overflow-hidden shadow-sm">{renderProfilePicCommon(profileImgUrl)}</div>}
+                                                        
+                                                        <div className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
+                                                            {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-bold uppercase">데이다라</span>}
+                                                            
+                                                            <div className={`flex items-end gap-1.5 ${msg.sender === 'me' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                                {/* 말풍선 본문 */}
+                                                                <div 
+                                                                    onClick={() => setActiveMsgId(activeMsgId === msg.id ? null : msg.id)}
+                                                                    className={`px-4 py-3 rounded-[20px] text-[15px] shadow-sm font-bold tracking-tight cursor-pointer transition-transform active:scale-[0.98] flex flex-col max-w-[240px] break-words ${msg.sender === 'me' ? 'bg-[#FEE500] text-gray-900 rounded-tr-sm' : 'bg-white text-gray-800 rounded-tl-sm'}`}
+                                                                >
+                                                                    {msg.imageUrl && (
+                                                                        <img src={msg.imageUrl} alt="첨부 이미지" className="max-w-full max-h-[220px] rounded-[16px] mb-2 object-cover" onClick={(e) => { e.stopPropagation(); setShowFullImage(msg.imageUrl); }} />
+                                                                    )}
+                                                                    {msg.text}
+                                                                </div>
+                                                                
+                                                                {/* 🌟 말풍선 옆으로 이동한 시간 표시 */}
+                                                                <span className="text-[10px] text-black/40 font-bold whitespace-nowrap mb-1">
+                                                                    {msg.time}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* 수정/삭제/재생성 옵션 메뉴 */}
+                                                            {activeMsgId === msg.id && (
+                                                                <div className={`flex gap-3 text-[11px] font-black text-black/40 mt-1.5 ${msg.sender === 'me' ? 'mr-1' : 'ml-1'}`}>
+                                                                    {msg.sender === 'me' && <button onClick={()=>editMsg(msg)} className="hover:text-black transition-colors px-1 py-0.5">수정</button>}
+                                                                    <button onClick={()=>deleteMsg(msg.id)} className="hover:text-red-500 transition-colors px-1 py-0.5">삭제</button>
+                                                                    {msg.sender === 'deidara' && <button onClick={()=>regenMsg(msg)} className="hover:text-black transition-colors px-1 py-0.5">재생성</button>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Fragment>
+                                        );
+                                    });
+                                })()}
+                                
+                                {isTyping && <div className="ml-12 text-[11px] text-white/70 font-black animate-pulse uppercase tracking-widest mt-2">Typing...</div>}
                                 <div ref={chatEndRef} className="pb-2" />
                             </main>
 
