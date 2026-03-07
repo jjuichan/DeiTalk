@@ -56,8 +56,8 @@
             measurementId: "G-QYDP8692TD"
         };
 
-        // 🚨 데이터 복구를 위해 기존 경로 철저히 고정
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
+        // 🚨 데이터 연동을 위해 환경(미리보기/깃허브) 상관없이 고정된 경로 사용!
+        const appId = 'deitalk-app';
         let auth = null, db = null, provider = null;
         let isFirebaseReady = false;
 
@@ -71,6 +71,7 @@
                     auth = firebase.auth();
                     db = firebase.firestore();
                     provider = new firebase.auth.GoogleAuthProvider();
+                    provider.setCustomParameters({ prompt: 'select_account' }); // 🌟 강제로 구글 계정 선택창 띄우기
                     isFirebaseReady = true;
                     return true;
                 }
@@ -594,5 +595,6 @@
     </script>
 </body>
 </html>
+
 
 
