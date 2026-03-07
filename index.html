@@ -715,12 +715,12 @@
                                                     {post.content}
                                                 </div>
                                                 
-                                                {/* 🌟 댓글 렌더링 복구 */}
                                                 <div className="bg-gray-50 rounded-[20px] p-4 space-y-3">
                                                     {(post.comments || []).map((cmt, idx) => (
                                                         <div key={idx} className="flex gap-2 text-[13px] mb-1">
                                                             <span className={`font-black shrink-0 ${cmt.author === 'me' ? 'text-gray-900' : 'text-orange-500'}`}>{cmt.author === 'me' ? '연지' : '데이다라'}</span>
-                                                            <span className="font-bold text-gray-700 leading-snug">{cmt.text}</span>
+                                                            {/* 🌟 기존 데이터(content)와 새 데이터(text)를 모두 읽어오도록 수정 */}
+                                                            <span className="font-bold text-gray-700 leading-snug flex-1 break-words">{cmt.text || cmt.content || cmt.message || (typeof cmt === 'string' ? cmt : '')}</span>
                                                         </div>
                                                     ))}
                                                     
@@ -843,5 +843,7 @@
     </script>
 </body>
 </html>
+
+
 
 
