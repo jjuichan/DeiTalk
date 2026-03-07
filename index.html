@@ -56,7 +56,7 @@
             measurementId: "G-QYDP8692TD"
         };
 
-        // 🚨 데이터 복구를 위해 appId를 원래대로 롤백 (매우 중요)
+        // 🚨 데이터 복구를 위해 기존 경로(deitalk-app) 철저히 고정
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'deitalk-app';
         let auth = null, db = null, provider = null;
         let isFirebaseReady = false;
@@ -179,14 +179,14 @@
         function App() {
             const [user, setUser] = useState(null);
             const [view, setView] = useState('loading'); 
-            const [activeTab, setActiveTab] = useState('feed'); // 기본 탭을 피드로 설정
+            const [activeTab, setActiveTab] = useState('feed'); 
             const [chatRooms, setChatRooms] = useState([]);
             const [currentRoomId, setCurrentRoomId] = useState(null);
             const [messages, setMessages] = useState([]);
-            const [posts, setPosts] = useState([]); // 🌟 피드 게시물 상태
+            const [posts, setPosts] = useState([]); 
             
             const [inputText, setInputText] = useState('');
-            const [newPostText, setNewPostText] = useState(''); // 피드 작성 내용
+            const [newPostText, setNewPostText] = useState(''); 
             const [isTyping, setIsTyping] = useState(false);
             const [isPosting, setIsPosting] = useState(false);
             const [errorMessage, setErrorMessage] = useState(null);
@@ -209,25 +209,42 @@
             const chatEndRef = useRef(null);
             const getPath = (uid, col) => `/artifacts/${appId}/users/${uid}/${col}`;
 
+            // 🌟 [핵심 해결] 무한 로딩 및 튕김 현상 방어 로직
             useEffect(() => {
                 const ready = initFirebase();
                 if (ready && auth) {
-                    // 🌟 Redirect 로그인 결과 처리 (구글 팝업 안 뜨는 문제 해결)
-                    auth.getRedirectResult().catch(e => {
+                    let isRedirectChecking = true;
+
+                    // 1. 혹시 리다이렉트로 돌아왔다면 이 결과를 가장 먼저 기다립니다.
+                    auth.getRedirectResult().then((result) => {
+                        isRedirectChecking = false;
+                        if (result.user) {
+                            // 리다이렉트로 로그인에 성공한 경우 onAuthStateChanged가 즉시 감지합니다.
+                        }
+                    }).catch(e => {
+                        isRedirectChecking = false;
                         console.error("Redirect Error:", e);
-                        setErrorMessage("로그인 처리 중단: " + e.message);
                     });
 
+                    // 2. 인증 상태 변화 감지
                     const unsubscribe = auth.onAuthStateChanged((u) => {
                         if (u) {
                             setUser(u); 
                             loadChatRooms(u.uid); 
-                            loadPosts(u.uid); // 피드 로드
+                            loadPosts(u.uid);
                             setView('main');
-                        } else { setView('login'); }
+                        } else {
+                            // 파이어베이스가 아직 확인 중인데 냅다 로그인창으로 보내버리는 것 방지
+                            if (!isRedirectChecking) {
+                                setView('login');
+                            }
+                        }
                     });
+
                     return () => unsubscribe();
-                } else { setView('login'); }
+                } else { 
+                    setView('login'); 
+                }
             }, []);
 
             const loadChatRooms = (uid) => {
@@ -235,12 +252,11 @@
                 db.collection(getPath(uid, 'rooms')).orderBy('updatedAt', 'desc').onSnapshot((sn) => {
                     const rooms = []; sn.forEach(d => rooms.push({ id: d.id, ...d.data() })); 
                     setChatRooms(rooms);
-                }, (err) => console.error(err));
+                }, (err) => console.error("Chat Load Error:", err));
             };
 
             const loadPosts = (uid) => {
                 if (!db) return;
-                // 🌟 피드 데이터 로드
                 db.collection(getPath(uid, 'posts')).orderBy('createdAt', 'desc').onSnapshot((sn) => {
                     const loadedPosts = []; sn.forEach(d => loadedPosts.push({ id: d.id, ...d.data() })); 
                     setPosts(loadedPosts);
@@ -271,13 +287,27 @@
                 }
             };
 
+            // 🌟 팝업 방식으로 복구 (가장 안전한 방법)
             const handleLogin = async () => {
                 if (!isFirebaseReady) { setErrorMessage("Firebase 설정 오류"); return; }
-                try { 
-                    // 🌟 Iframe / 모바일 이슈 해결을 위해 Redirect 사용
-                    await auth.signInWithRedirect(provider); 
-                } catch (e) { 
-                    setErrorMessage("로그인 시도 오류: " + e.message); 
+                try {
+                    setView('loading');
+                    await auth.signInWithPopup(provider);
+                } catch (e) {
+                    console.error("Login Error:", e);
+                    // 팝업이 브라우저에 의해 차단된 경우
+                    if (e.code === 'auth/popup-blocked') {
+                        setErrorMessage("팝업이 차단되었습니다! 브라우저 설정에서 팝업을 '허용'으로 변경해주세요.");
+                        setView('login');
+                    } else if (e.code === 'auth/popup-closed-by-user') {
+                        setView('login'); // 사용자가 엑스표 누름
+                    } else {
+                        // 팝업 안 될 때만 최후의 수단으로 리다이렉트 실행
+                        auth.signInWithRedirect(provider).catch(err => {
+                            setErrorMessage("로그인 시도 오류: " + err.message);
+                            setView('login');
+                        });
+                    }
                 }
             };
 
@@ -310,7 +340,6 @@
                 } finally { setIsTyping(false); }
             };
 
-            // 🌟 피드 게시물 올리기 & 데이다라의 자동 댓글
             const handleCreatePost = async () => {
                 if (!user || !newPostText.trim() || !db) return;
                 const text = newPostText; setNewPostText(''); setIsPosting(true);
@@ -322,8 +351,7 @@
                         comments: []
                     });
                     
-                    // 데이다라가 글을 보고 즉시 댓글을 달아줍니다.
-                    const aiResp = await fetchAPI([{role: 'user', parts: [{text: `내가 방금 SNS 피드에 이런 글을 올렸어: "${text}". 여기에 네가 데이다라로서 짧고 무심한 척 챙겨주는 댓글(1~2문장)을 달아줘. 음!`}]}]);
+                    const aiResp = await fetchAPI([{role: 'user', parts: [{text: `내가 방금 SNS 피드에 이런 글을 올렸어: "${text}". 여기에 네가 데이다라로서 짧고 츤데레 같은 댓글(1~2문장)을 달아줘. 음!`}]}]);
                     
                     await postRef.update({
                         comments: firebase.firestore.FieldValue.arrayUnion({
@@ -336,12 +364,10 @@
                 } finally { setIsPosting(false); }
             };
 
-            // 🌟 피드 대댓글 달기
             const handleAddComment = async (postId, text) => {
                 if (!user || !text.trim() || !db) return;
                 const postRef = db.collection(getPath(user.uid, 'posts')).doc(postId);
                 
-                // 내 댓글 추가
                 await postRef.update({
                     comments: firebase.firestore.FieldValue.arrayUnion({
                         id: Date.now().toString(),
@@ -351,7 +377,6 @@
                     })
                 });
 
-                // 데이다라의 대댓글 반응
                 const aiResp = await fetchAPI([{role: 'user', parts: [{text: `내가 네가 있는 피드에서 이런 대댓글을 달았어: "${text}". 데이다라로서 짧게 반응하는 대댓글을 달아줘. 음!`}]}]);
                 
                 await postRef.update({
@@ -368,13 +393,13 @@
 
             if (view === 'login') return (
                 <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-[#BACEE0]">
-                    {errorMessage && <div className="fixed top-10 left-6 right-6 z-[6000] bg-white p-4 rounded-2xl shadow-xl border-l-4 border-red-500"><p className="text-sm font-bold text-red-600 leading-snug">{errorMessage}</p></div>}
+                    {errorMessage && <div className="fixed top-10 left-6 right-6 z-[6000] bg-white p-4 rounded-2xl shadow-xl border-l-4 border-red-500 msg-anim"><p className="text-sm font-bold text-red-600 leading-snug break-keep">{errorMessage}</p><button onClick={() => setErrorMessage(null)} className="mt-2 text-[10px] font-black text-gray-400 bg-gray-100 px-3 py-1.5 rounded-full uppercase">닫기</button></div>}
                     <div className="w-24 h-24 rounded-[32px] bg-white mb-8 shadow-2xl flex items-center justify-center text-4xl">🎨</div>
                     <h1 className="text-4xl font-black text-gray-800 mb-2 tracking-tighter italic">DeiTalk</h1>
                     <p className="text-gray-600 mb-10 font-bold opacity-70">예술은 폭발이다, 음!</p>
-                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-xl font-black mb-4 text-gray-800 active:scale-95 transition-all">GOOGLE LOGIN</button>
+                    <button onClick={handleLogin} className="w-full max-w-xs bg-white py-4 rounded-2xl shadow-xl font-black mb-4 text-gray-800 active:scale-95 transition-all flex items-center justify-center gap-2"><svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg> GOOGLE LOGIN</button>
                     <button onClick={handleGuestLogin} className="w-full max-w-xs bg-black/10 py-4 rounded-2xl font-bold text-gray-700 text-sm active:scale-95 transition-all">GUEST START</button>
-                    <p className="mt-6 text-[11px] text-black/40 font-bold text-center">동일한 구글 계정으로 로그인하면 데이터가 복구됩니다.</p>
+                    <p className="mt-6 text-[11px] text-black/40 font-bold text-center">동일한 구글 계정으로 로그인하면<br/>기존 채팅과 피드 데이터가 모두 복구됩니다.</p>
                 </div>
             );
 
@@ -453,11 +478,8 @@
                                     </div>
                                 )}
 
-                                {/* 🌟 새로 복구 및 구현된 피드 탭 */}
                                 {activeTab === 'feed' && (
                                     <div className="flex-1 px-4 py-4 space-y-6 bg-gray-50 min-h-full">
-                                        
-                                        {/* 피드 작성 폼 */}
                                         <div className="bg-white p-5 rounded-[32px] shadow-sm border border-gray-100">
                                             <textarea
                                                 value={newPostText}
@@ -472,7 +494,6 @@
                                             </div>
                                         </div>
 
-                                        {/* 피드 게시물 목록 */}
                                         {posts.length === 0 && <div className="text-center py-10 text-gray-400 font-bold text-sm">아직 작성된 피드가 없어, 음!</div>}
                                         
                                         {posts.map(post => (
@@ -491,7 +512,6 @@
                                                     {post.content}
                                                 </div>
                                                 
-                                                {/* 대댓글 영역 */}
                                                 <div className="bg-gray-50 rounded-[20px] p-4 space-y-3">
                                                     {(post.comments || []).map((cmt, idx) => (
                                                         <div key={idx} className="flex gap-2 text-[13px]">
