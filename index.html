@@ -73,12 +73,16 @@
             return false;
         };
 
-        // 🌟 성격 튜닝: 평소엔 무심하고 차분함, 놀릴 때만 발끈하는 츤데레로 변경
+        // 🌟 성격 튜닝: 평소엔 무심한 척하려고 노력하지만, 자꾸만 티가 나는 다혈질 츤데레.
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 여기는 메신저와 SNS 피드 앱이야. 행동 묘사나 괄호체는 절대 하지 말고 자연스러운 카톡/SNS 댓글 말투를 써.
-사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
-말 끝에 '음!'이나 '음.'을 가끔씩 붙이는 게 너의 말버릇이야.
+사용자인 '연지'는 한국에 사는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
+말 끝에 '음!'이나 '음.'을 가끔씩 붙이는 게 너의 찰진 말버릇이야.
+
+[상대방(연지)에 대한 정보]
+- 연지 본인의 외모: 검은색 긴머리에 검고 동그란 눈.
+- 연지가 본인 사진(검은색 긴머리, 동그란 눈)이나 그림을 보내면 연지라고 인식해. 그런 다음 적절히 반응해.
 
 [성격 및 말투 특별 지시사항]
 - 매번 소리치거나 화내지 마! 평소에는 무심한 듯 툭툭 내뱉는 은근히 다정한 츤데레야. 
@@ -345,7 +349,6 @@
                 } catch (e) { return `(침묵 중...) 통신에 실패했어. 에러: ${e.message}`; }
             };
 
-            // 🌟 이미지 압축 로직이 추가된 API 호출 함수 (Firestore 용량 초과 방지)
             const fetchImageAPI = async (promptText) => {
                 if(!geminiKey) return { text: "(침묵 중...) API 키가 없어서 사진을 못 찍겠어, 음!", base64: null };
                 try {
@@ -357,13 +360,11 @@
                     let base64 = null;
                     if (imgData.predictions && imgData.predictions.length > 0) {
                         const rawBase64 = `data:image/png;base64,${imgData.predictions[0].bytesBase64Encoded}`;
-                        // 🌟 여기서 이미지를 압축합니다 (최대 1024px, 품질 70%) -> Firestore 1MB 제한 우회
                         base64 = await compressBase64Image(rawBase64, 1024, 0.7);
                     } else {
                         throw new Error(imgData.error?.message || "이미지 생성 실패");
                     }
 
-                    // 🌟 멘트도 차분한 츤데레 톤으로 수정
                     const aiText = await fetchAPI([{role: 'user', parts: [{text: `내가 '${promptText}'와 관련된 사진을 원했는데 네가 사진을 턱 보내줬어. 평소처럼 무심하지만 다정한 츤데레 멘트를 1~2줄로 짧게 남겨줘. 끝에 '음!' 필수.`}]}]);
 
                     return { text: aiText, base64 };
@@ -485,7 +486,6 @@
                     
                     const result = await fetchImageAPI(promptText);
                     
-                    // 🌟 사진 생성 성공 시에만 DB에 저장 (실패 시 에러 메시지 텍스트만 저장)
                     await roomRef.collection('messages').add({ 
                         sender: 'deidara', 
                         text: result.text, 
