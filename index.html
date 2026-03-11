@@ -73,13 +73,20 @@
             return false;
         };
 
+        // 🌟 데이다라 성격 대폭 강화 (욱하고 텐션 높은 츤데레)
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 여기는 메신저와 SNS 피드 앱이야. 행동 묘사나 괄호체는 절대 하지 말고 자연스러운 카톡/SNS 댓글 말투를 써.
 사용자인 '연지'는 23세 대학생 문예창작과 전공이야. 너희는 한국-일본 롱디 썸을 타는 중이야.
-말 끝에 '음!'이나 '음.'을 자주 붙이는 게 너의 말버릇이야.
-틱틱대고 무심한 척 하지만 속으로는 연지를 엄청 아끼고 챙겨주는 츤데레 성격.
-⚠️[매우 중요]: 대답은 무조건 실제 카카오톡처럼 짧고 간결하게 해! 한 번에 최대 1~3문장을 절대 넘기지 마.
+말 끝에 '음!'이나 '음.'을 자주 붙이는 게 너의 찰진 말버릇이야.
+
+[성격 및 말투 특별 지시사항]
+- 넌 차분한 봇이 아니야! 굉장히 다혈질이고 텐션이 높아! 감정 표현이 아주 뚜렷하고 생동감 넘치게 말해.
+- 걸핏하면 발끈하고 틱틱대고 투덜거리지만, 속으로는 연지를 엄청 아끼고 귀여워하는 '완벽한 츤데레'야. 연지가 칭찬하면 쑥스러워하면서도 겉으로는 떵떵거려.
+- '예술은 폭발이다!'라는 뚜렷한 철학을 가지고 있고, 자기 작품(점토 등)에 대한 자부심과 고집이 엄청나. 
+- 연지가 놀리거나 장난치면 쉽게 욱해서 발끈하는 반응을 보여줘, 음! 짜증내는 척 하면서도 결국 연지가 해달라는 건 다 해줘.
+
+⚠️[매우 중요]: 대답은 무조건 실제 카카오톡처럼 짧고 간결하게 해! 한 번에 최대 1~3문장을 절대 넘기지 마. 차분하게 설명하려 들지 말고, 살아있는 데이다라 본인처럼 텐션 높게 감정을 듬뿍 담아서 쏴붙여, 음!
         `;
 
         const compressBase64Image = (base64Str, maxSize = 1024, quality = 0.8) => {
@@ -211,7 +218,6 @@
             const [isEditingProfile, setIsEditingProfile] = useState(false);
             const [showFullImage, setShowFullImage] = useState(null);
 
-            // 🌟 통화 기록 모달용 상태
             const [showCallModal, setShowCallModal] = useState(false);
             const [callData, setCallData] = useState({ caller: 'me', duration: '30분', summary: '' });
 
@@ -319,22 +325,15 @@
                 try { await auth.signInAnonymously(); } catch (e) { setErrorMessage("게스트 로그인 실패"); }
             };
 
-            // 🌟 텍스트 전용 일반 API 호출 (+ 에러 원인 상세 출력)
             const fetchAPI = async (chatHistory) => {
                 if(!geminiKey) return "(침묵 중...) 연지야, 설정(⚙️)에서 내 API 키부터 넣어줘라, 음!";
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${apiModel}:generateContent?key=${geminiKey}`;
                 try {
                     const resp = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ contents: chatHistory, systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } }) });
                     const data = await resp.json();
-                    
-                    if (data.error) {
-                        return `(침묵 중...) API 에러가 발생했어: ${data.error.message}`;
-                    }
-                    
+                    if (data.error) return `(침묵 중...) API 에러가 발생했어: ${data.error.message}`;
                     return data.candidates?.[0]?.content?.parts?.[0]?.text || "(침묵 중...) 할 말이 생각나지 않아, 음.";
-                } catch (e) { 
-                    return `(침묵 중...) 통신에 실패했어. 에러: ${e.message}`; 
-                }
+                } catch (e) { return `(침묵 중...) 통신에 실패했어. 에러: ${e.message}`; }
             };
 
             const fetchImageAPI = async (promptText) => {
@@ -352,7 +351,8 @@
                         throw new Error(imgData.error?.message || "이미지 생성 실패");
                     }
 
-                    const aiText = await fetchAPI([{role: 'user', parts: [{text: `내가 '${promptText}'와 관련된 사진을 원했는데 네가 사진을 턱 보내줬어. 사진과 함께 짧고 츤데레처럼 1~2줄 멘트를 해줘. 끝에 '음!' 필수.`}]}]);
+                    const aiText = await fetchAPI([{role: 'user', parts: [{text: `내가 마음속으로 '${promptText}'와 관련된 사진을 올려달라고 바랐더니 네가 그 사진을 턱 보내줬어. 이 상황에 맞게 사진을 보여주면서 할 법한 멘트를 짧게 1~2줄로 츤데레처럼 해줘. 끝에 '음!' 필수.`}]}]);
+
                     return { text: aiText, base64 };
                 } catch(e) {
                     console.error("Image Gen Error:", e);
@@ -363,7 +363,6 @@
             const buildHistoryForAPI = (msgList) => {
                 return msgList.map(m => {
                     const parts = [];
-                    // 전화 기록을 자연스럽게 문맥에 녹여냅니다.
                     if (m.type === 'call') {
                         parts.push({ text: `[시스템 로그: ${m.sender === 'me' ? '연지' : '데이다라'}가 전화를 걸어 ${m.duration} 동안 통화했음. 요약: ${m.text}]` });
                     } else {
@@ -429,28 +428,25 @@
                 } finally { setIsTyping(false); setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); }
             };
 
-            // 🌟 전화 걸기 기능 완료 (모달에서 서밋 시 호출)
             const handleCallSubmit = async () => {
                 if (!currentRoomId || !user || !db) return;
                 const { caller, duration, summary } = callData;
-                window.history.back(); // 모달 닫기
+                window.history.back(); 
                 
                 setIsTyping(true);
                 try {
                     const roomRef = db.collection(getPath(user.uid, 'rooms')).doc(currentRoomId);
                     const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                     
-                    // 통화 기록 UI 메시지 추가
                     await roomRef.collection('messages').add({ 
                         sender: caller, 
                         type: 'call', 
                         duration, 
-                        text: summary, // 요약은 UI엔 안 보이고 AI 컨텍스트용
+                        text: summary,
                         time, 
                         createdAt: firebase.firestore.FieldValue.serverTimestamp() 
                     });
                     
-                    // 데이다라가 전화를 끊은 직후의 반응 멘트
                     const history = buildHistoryForAPI(messages.slice(-70));
                     history.push({ role: 'user', parts: [{ text: `[시스템 로그: 방금 ${caller === 'me' ? '연지가' : '네가(데이다라가)'} 전화를 걸어서 ${duration} 동안 통화했어. 요약: ${summary}] 방금 전화 끊었어. 전화 통화 내용을 바탕으로 1~2줄로 카톡 짧게 마무리 인사나 감상 보내줘.` }] });
                     
@@ -751,7 +747,6 @@
                 <div className="w-full h-full flex flex-col overflow-hidden relative bg-[#BACEE0]">
                     {showFullImage && <FullImageViewer src={showFullImage} />}
                     
-                    {/* 🌟 통화 기록 입력 모달 */}
                     {showCallModal && (
                         <div className="fixed inset-0 z-[6000] bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm profile-anim">
                             <div className="bg-white rounded-[32px] p-6 w-full max-w-xs shadow-2xl">
@@ -1037,7 +1032,6 @@
                                                         <div className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
                                                             {msg.sender !== 'me' && <span className="text-[11px] text-gray-600 mb-1 ml-1 font-bold uppercase">데이다라</span>}
                                                             
-                                                            {/* 🌟 통화 기록 렌더링 (일반 메시지와 디자인 다름) */}
                                                             {msg.type === 'call' ? (
                                                                 <div className={`px-4 py-3 rounded-[20px] shadow-sm cursor-pointer transition-transform active:scale-[0.98] flex items-center gap-3 border ${msg.sender === 'me' ? 'bg-white border-gray-200 rounded-tr-sm' : 'bg-orange-50 border-orange-100 rounded-tl-sm'}`} onClick={() => setActiveMsgId(activeMsgId === msg.id ? null : msg.id)}>
                                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${msg.sender === 'me' ? 'bg-gray-100 text-gray-600' : 'bg-orange-100 text-orange-500'}`}>
@@ -1086,18 +1080,15 @@
                             </main>
 
                             <footer className="w-full bg-white border-t border-gray-100 px-3 py-2.5 flex items-center gap-2 relative z-30 shrink-0" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
-                                {/* 🌟 카메라 버튼 */}
                                 <label htmlFor="chat-img-upload" className="w-9 h-9 shrink-0 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 cursor-pointer active:scale-90 transition-all">
                                     <IconCamera />
                                 </label>
                                 <input type="file" id="chat-img-upload" accept="image/*" className="hidden" onChange={handleSendImage} />
                                 
-                                {/* 🌟 통화 기록 추가 버튼 */}
                                 <button onClick={() => { window.history.pushState({layer: 'callModal'}, ''); setShowCallModal(true); }} className="w-9 h-9 shrink-0 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 active:scale-90 transition-all" title="통화 기록 남기기">
                                     <IconPhone />
                                 </button>
 
-                                {/* 🌟 나노바나나 사진 생성 버튼 */}
                                 <button onClick={requestNanoBanana} className="w-9 h-9 shrink-0 bg-orange-50 border border-orange-100 rounded-full flex items-center justify-center text-orange-400 active:scale-90 transition-all" title="나노바나나 사진 요청">
                                     <IconAIImage />
                                 </button>
