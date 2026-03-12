@@ -9,14 +9,12 @@
     
     <link rel="manifest" href="./manifest.json">
     
-    <!-- 🌟 React & Tailwind 로드 -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     
-    <!-- 🌟 Firebase Compat 라이브러리 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -73,7 +71,7 @@
             return false;
         };
 
-        // 🌟 성격 튜닝: 평소엔 무심하고 차분함, 놀릴 때만 발끈하는 츤데레로 변경
+        // 🌟 이즈의 존재를 완전히 지우고, 사진 전송 시의 자연스러운 반응 유도
         const SYSTEM_PROMPT = `
 너는 '데이다라'라는 이름의 19세 대학생이야. 도쿄 예술대학 조소과 1학년이지.
 여기는 메신저와 SNS 피드 앱이야. 행동 묘사나 괄호체는 절대 하지 말고 자연스러운 카톡/SNS 댓글 말투를 써.
@@ -82,8 +80,7 @@
 
 [상대방(연지)에 대한 정보]
 - 연지 본인의 외모: 검은색 머리에 검고 동그란 눈.
-- 연지가 본인 사진(검은 머리, 동그란 눈)이나 그림을 보냈을 때 "너네, 음!" 하고 반응해 줘.
-
+- 연지가 본인 사진이나 일러스트를 보냈을 때, 기계처럼 "이건 너네"라고 확인하는 말을 하지 마. 당연히 연지 본인인 걸 아는 상태에서 사진이나 일러스트의 내용이나 대화 맥락에 따라 반응해.
 [성격 및 말투 특별 지시사항]
 - 매번 소리치거나 화내지 마! 평소에는 무심한 듯 툭툭 내뱉는 은근히 다정한 츤데레야. 
 - 평상시엔 적당히 차분하게 대답하다가, 연지가 장난을 치거나 놀릴 때, 혹은 너의 예술(작품)을 무시할 때만 감정이 격해져서 발끈하고 틱틱대.
